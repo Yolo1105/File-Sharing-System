@@ -12,7 +12,6 @@ public class MainServer {
         ExecutorService pool = Executors.newFixedThreadPool(MAX_THREADS);
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Server started on port " + PORT);
-            DBLogger.init();  // Initialize database
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("New client connected: " + clientSocket);
