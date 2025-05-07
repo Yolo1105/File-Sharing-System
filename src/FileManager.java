@@ -1,14 +1,17 @@
 import java.io.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FileManager {
-    private static final String SHARED_DIR = "server_files/";
+    public static final String SHARED_DIR = Config.getFilesDirectory();
     private final ReentrantLock lock = new ReentrantLock();
+    private static final Logger logger = Logger.getInstance();
 
     public FileManager() {
         File dir = new File(SHARED_DIR);
         if (!dir.exists()) {
-            System.out.println("[INFO] Creating server storage directory: " + SHARED_DIR);
+            logger.log(Logger.Level.INFO, "FileManager", "Creating server storage directory: " + SHARED_DIR);
             dir.mkdirs();
         }
     }
@@ -16,10 +19,15 @@ public class FileManager {
     public void receiveFile(String fileName, InputStream inputStream) {
         lock.lock();
         try {
-            System.out.println("[INFO] Receiving file: " + fileName);
+            logger.log(Logger.Level.INFO, "FileManager", "Receiving file: " + fileName);
             DataInputStream dataIn = new DataInputStream(inputStream);
             long fileSize = dataIn.readLong();
-            System.out.println("[DEBUG] Expecting file size: " + fileSize + " bytes");
+            logger.log(Logger.Level.INFO, "FileManager", "Expecting file size: " + fileSize + " bytes");
+
+            // Read checksum
+            int checksumLength = dataIn.readInt();
+            byte[] expectedChecksum = new byte[checksumLength];
+            dataIn.readFully(expectedChecksum);
 
             File outputFile = new File(SHARED_DIR + fileName.trim());
             try (FileOutputStream fos = new FileOutputStream(outputFile)) {
@@ -32,11 +40,21 @@ public class FileManager {
                     remaining -= count;
                 }
                 fos.flush();
-                System.out.println("[INFO] File received and saved to: " + outputFile.getAbsolutePath());
             }
-        } catch (IOException e) {
-            System.out.println("[ERROR] Failed to receive file: " + e.getMessage());
-            e.printStackTrace();
+
+            // Verify checksum
+            byte[] actualChecksum = calculateChecksum(outputFile);
+            boolean checksumMatch = MessageDigest.isEqual(expectedChecksum, actualChecksum);
+
+            if (!checksumMatch) {
+                logger.log(Logger.Level.ERROR, "FileManager", "Checksum verification failed for file: " + fileName);
+                outputFile.delete(); // Delete corrupted file
+                throw new IOException("File transfer failed: Checksum verification failed");
+            }
+
+            logger.log(Logger.Level.INFO, "FileManager", "File received and saved to: " + outputFile.getAbsolutePath());
+        } catch (IOException | NoSuchAlgorithmException e) {
+            logger.log(Logger.Level.ERROR, "FileManager", "Failed to receive file: " + fileName, e);
         } finally {
             lock.unlock();
         }
@@ -47,15 +65,23 @@ public class FileManager {
         try {
             File inputFile = new File(SHARED_DIR + fileName.trim());
             if (!inputFile.exists()) {
-                System.out.println("[WARNING] File not found: " + inputFile.getAbsolutePath());
+                logger.log(Logger.Level.WARNING, "FileManager", "File not found: " + inputFile.getAbsolutePath());
+                DataOutputStream dataOut = new DataOutputStream(outputStream);
+                dataOut.writeLong(-1); // Indicate file not found
                 return;
             }
 
-            System.out.println("[INFO] Sending file: " + inputFile.getName());
+            logger.log(Logger.Level.INFO, "FileManager", "Sending file: " + inputFile.getName());
             DataOutputStream dataOut = new DataOutputStream(outputStream);
             long fileSize = inputFile.length();
             dataOut.writeLong(fileSize);
-            System.out.println("[DEBUG] Sending file size: " + fileSize + " bytes");
+            logger.log(Logger.Level.INFO, "FileManager", "Sending file size: " + fileSize + " bytes");
+
+            // Calculate and send checksum
+            byte[] checksum = calculateChecksum(inputFile);
+            dataOut.writeInt(checksum.length);
+            dataOut.write(checksum);
+            logger.log(Logger.Level.INFO, "FileManager", "Sending checksum of length: " + checksum.length + " bytes");
 
             try (FileInputStream fis = new FileInputStream(inputFile)) {
                 byte[] buffer = new byte[4096];
@@ -64,11 +90,10 @@ public class FileManager {
                     dataOut.write(buffer, 0, count);
                 }
                 dataOut.flush();
-                System.out.println("[INFO] File transfer complete.");
+                logger.log(Logger.Level.INFO, "FileManager", "File transfer complete: " + fileName);
             }
-        } catch (IOException e) {
-            System.out.println("[ERROR] Failed to send file: " + e.getMessage());
-            e.printStackTrace();
+        } catch (IOException | NoSuchAlgorithmException e) {
+            logger.log(Logger.Level.ERROR, "FileManager", "Failed to send file: " + fileName, e);
         } finally {
             lock.unlock();
         }
@@ -78,9 +103,30 @@ public class FileManager {
         File folder = new File(SHARED_DIR);
         StringBuilder sb = new StringBuilder();
         sb.append("Available files:\n");
-        for (File file : folder.listFiles()) {
-            if (file.isFile()) sb.append(" - ").append(file.getName()).append("\n");
+        File[] files = folder.listFiles();
+        if (files != null && files.length > 0) {
+            for (File file : files) {
+                if (file.isFile()) {
+                    sb.append(" - ").append(file.getName())
+                            .append(" (").append(file.length()).append(" bytes)")
+                            .append("\n");
+                }
+            }
+        } else {
+            sb.append("No files available.\n");
         }
         return sb.toString();
+    }
+
+    private byte[] calculateChecksum(File file) throws IOException, NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = fis.read(buffer)) > 0) {
+                digest.update(buffer, 0, count);
+            }
+        }
+        return digest.digest();
     }
 }

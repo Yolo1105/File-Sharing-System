@@ -5,20 +5,37 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainServer {
-    private static final int PORT = 12345;
-    private static final int MAX_THREADS = 10;
+    private static final Logger logger = Logger.getInstance();
 
     public static void main(String[] args) {
-        ExecutorService pool = Executors.newFixedThreadPool(MAX_THREADS);
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            System.out.println("Server started on port " + PORT);
+        int port = Config.getServerPort();
+        int maxThreads = Config.getMaxThreads();
+
+        ExecutorService pool = Executors.newFixedThreadPool(maxThreads);
+
+        logger.log(Logger.Level.INFO, "MainServer", "Starting server on port " + port + " with " + maxThreads + " threads");
+
+        // Add shutdown hook for graceful shutdown
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logger.log(Logger.Level.INFO, "MainServer", "Server shutting down...");
+            pool.shutdown();
+        }));
+
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            logger.log(Logger.Level.INFO, "MainServer", "Server started successfully");
+
             while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("New client connected: " + clientSocket);
-                pool.execute(new ClientHandler(clientSocket));
+                try {
+                    Socket clientSocket = serverSocket.accept();
+                    logger.log(Logger.Level.INFO, "MainServer", "New connection accepted from: " + clientSocket.getRemoteSocketAddress());
+                    pool.execute(new ClientHandler(clientSocket));
+                } catch (IOException e) {
+                    logger.log(Logger.Level.ERROR, "MainServer", "Error accepting client connection", e);
+                }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Logger.Level.FATAL, "MainServer", "Could not start server on port " + port, e);
+            System.exit(1);
         }
     }
 }

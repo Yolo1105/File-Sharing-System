@@ -1,0 +1,101 @@
+[2025-05-06 22:59:54.249] [INFO] [Logger] Logging system initialized
+[2025-05-06 22:59:54.269] [INFO] [MainServer] Starting server on port 12345 with 10 threads
+[2025-05-06 22:59:54.270] [INFO] [MainServer] Server started successfully
+[2025-05-06 22:59:58.420] [INFO] [Logger] Logging system initialized
+[2025-05-06 23:00:00.821] [INFO] [MainServer] New connection accepted from: /127.0.0.1:50921
+[2025-05-06 23:00:00.825] [INFO] [ClientHandler] New client connected: /127.0.0.1:50921
+[2025-05-06 23:00:00.826] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-06 23:00:00.826] [INFO] [ClientHandler] Client identified as: Mohan
+[2025-05-06 23:00:00.829] [INFO] [Broadcaster] Broadcast message: [SERVER] Mohan has joined the server.
+[2025-05-06 23:00:11.325] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-06 23:00:11.326] [INFO] [ClientHandler] Mohan requested file list
+[2025-05-06 23:00:16.845] [INFO] [ClientHandler] Mohan issued command: DOWNLOAD test.txt
+[2025-05-06 23:00:16.845] [INFO] [FileManager] Sending file: test.txt
+[2025-05-06 23:00:16.847] [INFO] [FileManager] Sending file size: 22 bytes
+[2025-05-06 23:00:16.867] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-06 23:00:16.868] [INFO] [FileManager] File transfer complete: test.txt
+[2025-05-06 23:00:17.010] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-06 23:00:17.011] [ERROR] [DBLogger] Failed to log action: database connection closed
+java.sql.SQLException: database connection closed
+	at org.sqlite.SQLiteConnection.checkOpen(SQLiteConnection.java:429)
+	at org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:31)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at DBLogger.log(DBLogger.java:38)
+	at ClientHandler.run(ClientHandler.java:86)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+[2025-05-06 23:00:17.012] [INFO] [Broadcaster] Broadcast message: [DOWNLOAD] Mohan downloaded: test.txt
+[2025-05-06 23:00:40.098] [INFO] [Logger] Logging system shutting down
+[2025-05-06 23:00:40.100] [INFO] [Logger] Logging system shutting down
+[2025-05-06 23:12:06.184] [INFO] [Logger] Logging system initialized
+[2025-05-06 23:12:06.202] [INFO] [MainServer] Starting server on port 12345 with 10 threads
+[2025-05-06 23:12:06.203] [INFO] [MainServer] Server started successfully
+[2025-05-06 23:12:13.611] [INFO] [Logger] Logging system initialized
+[2025-05-06 23:12:21.323] [INFO] [MainServer] New connection accepted from: /127.0.0.1:52203
+[2025-05-06 23:12:21.328] [INFO] [ClientHandler] New client connected: /127.0.0.1:52203
+[2025-05-06 23:12:21.330] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-06 23:12:21.330] [INFO] [ClientHandler] Client identified as: Mohan
+[2025-05-06 23:12:21.334] [INFO] [Broadcaster] Broadcast message: [SERVER] Mohan has joined the server.
+[2025-05-06 23:13:31.560] [INFO] [ClientHandler] Mohan issued command: UPLOAD test.txt
+[2025-05-06 23:13:31.560] [INFO] [FileManager] Receiving file: test.txt
+[2025-05-06 23:13:31.563] [INFO] [FileManager] Expecting file size: 5 bytes
+[2025-05-06 23:13:31.606] [INFO] [FileManager] File received and saved to: D:\Java\FileSharingSystem\server_files\test.txt
+[2025-05-06 23:13:31.794] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-06 23:13:31.795] [ERROR] [DBLogger] Failed to log action: database connection closed
+java.sql.SQLException: database connection closed
+	at org.sqlite.SQLiteConnection.checkOpen(SQLiteConnection.java:429)
+	at org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:31)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at DBLogger.log(DBLogger.java:38)
+	at ClientHandler.run(ClientHandler.java:62)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+[2025-05-06 23:13:31.796] [INFO] [Broadcaster] Broadcast message: [UPLOAD] Mohan uploaded: test.txt
+[2025-05-06 23:14:02.185] [INFO] [Logger] Logging system initialized
+[2025-05-06 23:14:02.190] [INFO] [Client] Starting client...
+[2025-05-06 23:14:02.202] [INFO] [MainServer] New connection accepted from: /127.0.0.1:52741
+[2025-05-06 23:14:02.203] [INFO] [ClientHandler] New client connected: /127.0.0.1:52741
+[2025-05-06 23:14:02.221] [INFO] [Client] Connected to server at localhost:12345
+[2025-05-06 23:14:04.866] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-06 23:14:04.866] [INFO] [ClientHandler] Client identified as: Mohan
+[2025-05-06 23:14:04.867] [INFO] [Broadcaster] Broadcast message: [SERVER] Mohan has joined the server.
+[2025-05-06 23:14:47.895] [INFO] [ClientHandler] Mohan issued command: UPLOAD test.txt
+[2025-05-06 23:14:47.895] [INFO] [FileManager] Receiving file: test.txt
+[2025-05-06 23:14:47.895] [INFO] [FileManager] Expecting file size: 22 bytes
+[2025-05-06 23:14:47.920] [INFO] [FileManager] File received and saved to: D:\Java\FileSharingSystem\server_files\test.txt
+[2025-05-06 23:14:47.920] [ERROR] [DBLogger] Failed to log action: database connection closed
+java.sql.SQLException: database connection closed
+	at org.sqlite.SQLiteConnection.checkOpen(SQLiteConnection.java:429)
+	at org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:31)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at DBLogger.log(DBLogger.java:38)
+	at ClientHandler.run(ClientHandler.java:62)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+[2025-05-06 23:14:47.921] [INFO] [Broadcaster] Broadcast message: [UPLOAD] Mohan uploaded: test.txt
+[2025-05-06 23:15:09.140] [INFO] [ClientHandler] Mohan issued command: DOWNLOAD test.txt
+[2025-05-06 23:15:09.141] [INFO] [FileManager] Sending file: test.txt
+[2025-05-06 23:15:09.141] [INFO] [FileManager] Sending file size: 22 bytes
+[2025-05-06 23:15:09.144] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-06 23:15:09.145] [INFO] [FileManager] File transfer complete: test.txt
+[2025-05-06 23:15:09.145] [ERROR] [DBLogger] Failed to log action: database connection closed
+java.sql.SQLException: database connection closed
+	at org.sqlite.SQLiteConnection.checkOpen(SQLiteConnection.java:429)
+	at org.sqlite.jdbc4.JDBC4Connection.prepareStatement(JDBC4Connection.java:31)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:225)
+	at org.sqlite.jdbc3.JDBC3Connection.prepareStatement(JDBC3Connection.java:205)
+	at DBLogger.log(DBLogger.java:38)
+	at ClientHandler.run(ClientHandler.java:89)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+[2025-05-06 23:15:09.258] [INFO] [Broadcaster] Broadcast message: [DOWNLOAD] Mohan downloaded: test.txt
+[2025-05-06 23:17:32.471] [INFO] [Logger] Logging system shutting down
+[2025-05-06 23:17:32.476] [INFO] [Logger] Logging system shutting down
+[2025-05-06 23:17:32.481] [INFO] [Logger] Logging system shutting down

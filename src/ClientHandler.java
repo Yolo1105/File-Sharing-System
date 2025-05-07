@@ -1,11 +1,13 @@
 import java.io.*;
 import java.net.Socket;
 import java.util.StringTokenizer;
+import java.io.File;
 
 public class ClientHandler implements Runnable {
     private final Socket socket;
     private static final FileManager fileManager = new FileManager();
-    private static final Broadcaster broadcaster = Broadcaster.getInstance(); // For real-time updates
+    private static final Broadcaster broadcaster = Broadcaster.getInstance();
+    private static final Logger logger = Logger.getInstance();
     private String clientName = "Unknown";
 
     public ClientHandler(Socket socket) {
@@ -14,7 +16,7 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("[INFO] New client connected: " + socket.getRemoteSocketAddress());
+        logger.log(Logger.Level.INFO, "ClientHandler", "New client connected: " + socket.getRemoteSocketAddress());
         try (
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))
@@ -29,7 +31,7 @@ public class ClientHandler implements Runnable {
                     clientName = parts[1].trim();
                     broadcaster.register(clientName, writer);
                 }
-                System.out.println("[INFO] Client identified as: " + clientName);
+                logger.log(Logger.Level.INFO, "ClientHandler", "Client identified as: " + clientName);
                 broadcaster.broadcast("[SERVER] " + clientName + " has joined the server.");
             } else {
                 writer.write("Missing CLIENT_ID. Connection closed.\n");
@@ -42,7 +44,7 @@ public class ClientHandler implements Runnable {
 
             String line;
             while ((line = reader.readLine()) != null) {
-                System.out.println("[INFO][" + clientName + "] Command: " + line);
+                logger.log(Logger.Level.INFO, "ClientHandler", clientName + " issued command: " + line);
                 StringTokenizer tokenizer = new StringTokenizer(line);
                 if (!tokenizer.hasMoreTokens()) continue;
 
@@ -70,32 +72,54 @@ public class ClientHandler implements Runnable {
                             break;
                         }
                         String downloadFilename = tokenizer.nextToken();
-                        fileManager.sendFile(downloadFilename, socket.getOutputStream());
-                        DBLogger.log(clientName, "DOWNLOAD", downloadFilename);
-                        writer.write("Download saved to downloads/.\n");
-                        writer.flush();
-                        broadcaster.broadcast("[DOWNLOAD] " + clientName + " downloaded: " + downloadFilename);
+
+                        // Check if file exists before attempting to send
+                        File requestedFile = new File(FileManager.SHARED_DIR + downloadFilename);
+                        if (!requestedFile.exists() || !requestedFile.isFile()) {
+                            writer.write("ERROR: File '" + downloadFilename + "' not found on server.\n");
+                            writer.flush();
+                            logger.log(Logger.Level.WARNING, "ClientHandler", "Download failed - file not found: " + downloadFilename);
+                            break;
+                        }
+
+                        try {
+                            // Send file data
+                            fileManager.sendFile(downloadFilename, socket.getOutputStream());
+                            // Log the action
+                            DBLogger.log(clientName, "DOWNLOAD", downloadFilename);
+                            // Wait a bit to ensure all data is flushed before sending text response
+                            Thread.sleep(100);
+                            // Send text response
+                            writer.write("Download complete.\n");
+                            writer.flush();
+                            broadcaster.broadcast("[DOWNLOAD] " + clientName + " downloaded: " + downloadFilename);
+                        } catch (InterruptedException ex) {
+                            logger.log(Logger.Level.ERROR, "ClientHandler", "Interrupted during download", ex);
+                        }
                         break;
 
                     case "LIST":
-                        writer.write(fileManager.listFiles());
+                        String fileList = fileManager.listFiles();
+                        writer.write(fileList);
                         writer.flush();
+                        logger.log(Logger.Level.INFO, "ClientHandler", clientName + " requested file list");
                         break;
 
                     case "EXIT":
+                        broadcaster.broadcast("[SERVER] " + clientName + " has left the server.");
                         broadcaster.deregister(clientName);
-                        System.out.println("[INFO] " + clientName + " disconnected.");
+                        logger.log(Logger.Level.INFO, "ClientHandler", "Client disconnected: " + clientName);
                         return;
 
                     default:
-                        writer.write("Unknown command.\n");
+                        writer.write("Unknown command. Available commands: UPLOAD, DOWNLOAD, LIST, EXIT\n");
                         writer.flush();
                         break;
                 }
             }
 
         } catch (IOException e) {
-            System.out.println("[ERROR] Connection lost with " + clientName + ": " + socket.getRemoteSocketAddress());
+            logger.log(Logger.Level.ERROR, "ClientHandler", "Connection lost with " + clientName, e);
             broadcaster.deregister(clientName);
         }
     }

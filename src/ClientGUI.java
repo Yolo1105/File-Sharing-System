@@ -4,15 +4,20 @@ import java.awt.event.ActionEvent;
 import java.io.*;
 import java.net.Socket;
 import java.sql.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class ClientGUI extends JFrame {
     private JTextArea logArea;
     private JTextField downloadField;
     private JButton uploadButton, downloadButton, listButton, viewLogsButton;
     private Socket socket;
-    private BufferedReader reader;
-    private BufferedWriter writer;
+    private BufferedReader textReader;
+    private BufferedWriter textWriter;
+    private DataInputStream dataInputStream;
+    private DataOutputStream dataOutputStream;
     private String clientId;
+    private static final Logger logger = Logger.getInstance();
 
     public ClientGUI() {
         clientId = JOptionPane.showInputDialog(this, "Enter your client name:");
@@ -57,26 +62,34 @@ public class ClientGUI extends JFrame {
 
     private void connectToServer() {
         try {
-            socket = new Socket("localhost", 12345);
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            socket = new Socket("localhost", Config.getServerPort());
 
-            writer.write("CLIENT_ID " + clientId + "\n");
-            writer.flush();
+            // Create separate streams for text commands and binary data
+            textReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            textWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            dataInputStream = new DataInputStream(socket.getInputStream());
+            dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
+            textWriter.write("CLIENT_ID " + clientId + "\n");
+            textWriter.flush();
+
+            // Thread to handle incoming text messages
             new Thread(() -> {
                 try {
                     String line;
-                    while ((line = reader.readLine()) != null) {
-                        logArea.append(line + "\n");
+                    while ((line = textReader.readLine()) != null) {
+                        final String message = line;
+                        SwingUtilities.invokeLater(() -> logArea.append(message + "\n"));
                     }
                 } catch (IOException e) {
-                    logArea.append("[ERROR] Connection lost.\n");
+                    SwingUtilities.invokeLater(() -> logArea.append("[ERROR] Connection lost.\n"));
+                    logger.log(Logger.Level.ERROR, "ClientGUI", "Connection lost", e);
                 }
             }).start();
 
         } catch (IOException e) {
             showError("Failed to connect to server: " + e.getMessage());
+            logger.log(Logger.Level.ERROR, "ClientGUI", "Failed to connect to server", e);
         }
     }
 
@@ -87,23 +100,35 @@ public class ClientGUI extends JFrame {
 
         File file = chooser.getSelectedFile();
         try {
-            writer.write("UPLOAD " + file.getName() + "\n");
-            writer.flush();
+            // Send upload command
+            textWriter.write("UPLOAD " + file.getName() + "\n");
+            textWriter.flush();
+            logArea.append("[INFO] Sending upload command for: " + file.getName() + "\n");
 
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            out.writeLong(file.length());
+            // Send file size
+            dataOutputStream.writeLong(file.length());
 
+            // Calculate and send checksum
+            byte[] checksum = calculateChecksum(file);
+            dataOutputStream.writeInt(checksum.length);
+            dataOutputStream.write(checksum);
+
+            // Send file data
             try (BufferedInputStream fis = new BufferedInputStream(new FileInputStream(file))) {
                 byte[] buffer = new byte[4096];
                 int count;
                 while ((count = fis.read(buffer)) > 0) {
-                    out.write(buffer, 0, count);
+                    dataOutputStream.write(buffer, 0, count);
                 }
             }
-            out.flush();
+            dataOutputStream.flush();
             logArea.append("[INFO] Uploaded " + file.getName() + " from folder: " + file.getParent() + "\n");
         } catch (IOException ex) {
             showError("Upload failed: " + ex.getMessage());
+            logger.log(Logger.Level.ERROR, "ClientGUI", "Upload failed", ex);
+        } catch (Exception ex) {
+            showError("Error calculating checksum: " + ex.getMessage());
+            logger.log(Logger.Level.ERROR, "ClientGUI", "Checksum calculation failed", ex);
         }
     }
 
@@ -112,55 +137,108 @@ public class ClientGUI extends JFrame {
         if (filename.isEmpty()) return;
 
         try {
-            writer.write("DOWNLOAD " + filename + "\n");
-            writer.flush();
+            // Clear the input stream buffer before starting
+            while (textReader.ready()) textReader.readLine();
 
-            InputStream rawIn = socket.getInputStream();
-            DataInputStream in = new DataInputStream(rawIn);
-            long size = in.readLong();  // wait for file size
+            // Send download command
+            textWriter.write("DOWNLOAD " + filename + "\n");
+            textWriter.flush();
+            logArea.append("[INFO] Requesting download of: " + filename + "\n");
+
+            // Receive file size
+            long size = dataInputStream.readLong();
 
             if (size <= 0) {
                 logArea.append("[ERROR] Server reported invalid or missing file.\n");
                 return;
             }
 
+            logArea.append("[INFO] Receiving file: " + filename + " (" + size + " bytes)\n");
+
+            // Receive checksum
+            int checksumLength = dataInputStream.readInt();
+            byte[] expectedChecksum = new byte[checksumLength];
+            dataInputStream.readFully(expectedChecksum);
+
+            // Create download directory if it doesn't exist
             File dir = new File("downloads");
             dir.mkdirs();
             File outFile = new File(dir, filename);
+
+            // Receive file data with progress reporting
             try (BufferedOutputStream fos = new BufferedOutputStream(new FileOutputStream(outFile))) {
                 byte[] buffer = new byte[4096];
                 long remaining = size;
                 int count;
+                long lastProgressUpdate = 0;
                 while (remaining > 0 &&
-                        (count = in.read(buffer, 0, (int) Math.min(buffer.length, remaining))) != -1) {
+                        (count = dataInputStream.read(buffer, 0, (int) Math.min(buffer.length, remaining))) != -1) {
                     fos.write(buffer, 0, count);
                     remaining -= count;
+
+                    // Update progress every ~10%
+                    long progressPoint = size / 10;
+                    if (progressPoint > 0 && (size - remaining) / progressPoint > lastProgressUpdate) {
+                        lastProgressUpdate = (size - remaining) / progressPoint;
+                        final int percentage = (int)(100 * (size - remaining) / (double)size);
+                        SwingUtilities.invokeLater(() ->
+                                logArea.append("[INFO] Download progress: " + percentage + "%\n"));
+                    }
                 }
                 fos.flush();
             }
 
+            // Verify checksum
+            byte[] actualChecksum = calculateChecksum(outFile);
+            boolean checksumMatch = MessageDigest.isEqual(expectedChecksum, actualChecksum);
+
+            if (!checksumMatch) {
+                logArea.append("[ERROR] Downloaded file is corrupted. Checksum verification failed.\n");
+                outFile.delete(); // Delete corrupted file
+                return;
+            }
+
             logArea.append("[INFO] Downloaded " + filename + " to folder: downloads/\n");
+
+            // Start a separate thread to wait for the response message without blocking the UI
+            new Thread(() -> {
+                try {
+                    String response = textReader.readLine();
+                    if (response != null) {
+                        SwingUtilities.invokeLater(() -> logArea.append("[SERVER] " + response + "\n"));
+                    }
+                } catch (IOException ex) {
+                    SwingUtilities.invokeLater(() -> logArea.append("[ERROR] Failed to read server response\n"));
+                    logger.log(Logger.Level.ERROR, "ClientGUI", "Failed to read server response", ex);
+                }
+            }).start();
 
         } catch (IOException ex) {
             showError("Download failed: " + ex.getMessage());
+            logger.log(Logger.Level.ERROR, "ClientGUI", "Download failed", ex);
+        } catch (Exception ex) {
+            showError("Error verifying download: " + ex.getMessage());
+            logger.log(Logger.Level.ERROR, "ClientGUI", "Checksum verification failed", ex);
         }
     }
 
     private void handleListFiles(ActionEvent e) {
         try {
-            writer.write("LIST\n");
-            writer.flush();
+            textWriter.write("LIST\n");
+            textWriter.flush();
+            logArea.append("[INFO] Requesting file list from server...\n");
         } catch (IOException ex) {
-            showError("Failed to send LIST command.");
+            showError("Failed to send LIST command: " + ex.getMessage());
+            logger.log(Logger.Level.ERROR, "ClientGUI", "Failed to send LIST command", ex);
         }
     }
 
     private void handleViewLogs(ActionEvent e) {
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:file_logs.db");
+        try (Connection conn = DriverManager.getConnection(Config.getDbUrl());
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM logs ORDER BY timestamp DESC")) {
+             ResultSet rs = stmt.executeQuery("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 50")) {
 
-            logArea.append("=== File Logs ===\n");
+            logArea.append("=== File Logs (Last 50 Actions) ===\n");
             boolean hasLogs = false;
             while (rs.next()) {
                 hasLogs = true;
@@ -170,17 +248,30 @@ public class ClientGUI extends JFrame {
                         rs.getString("filename") + "\n");
             }
             if (!hasLogs) {
-                logArea.append("Nothing is shared yet.\n");
+                logArea.append("No logs found.\n");
             }
 
         } catch (SQLException ex) {
-            showError("DB Error: " + ex.getMessage());
+            showError("Database Error: " + ex.getMessage());
+            logger.log(Logger.Level.ERROR, "ClientGUI", "Database error while viewing logs", ex);
         }
     }
 
     private void showError(String msg) {
         JOptionPane.showMessageDialog(this, msg, "Error", JOptionPane.ERROR_MESSAGE);
         logArea.append("[ERROR] " + msg + "\n");
+    }
+
+    private byte[] calculateChecksum(File file) throws IOException, NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = fis.read(buffer)) > 0) {
+                digest.update(buffer, 0, count);
+            }
+        }
+        return digest.digest();
     }
 
     public static void main(String[] args) {
