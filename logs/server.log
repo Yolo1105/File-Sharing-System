@@ -31,3 +31,29 @@
 [2025-05-08 00:20:03] [INFO] [MainServer] Server shutting down...
 [2025-05-08 00:20:03] [INFO] [Logger] Logging system shutting down
 [2025-05-08 00:20:03] [INFO] [Logger] Logging system shutting down
+[2025-05-08 15:09:04] [INFO] [Logger] Logging system initialized
+[2025-05-08 15:09:04] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 15:09:04] [INFO] [MainServer] Initializing server...
+[2025-05-08 15:09:04] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 15:09:04] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 15:09:04] [INFO] [MainServer] Starting server on port 9000 with 5 core threads, 10 max threads
+[2025-05-08 15:09:04] [INFO] [MainServer] Server started successfully
+[2025-05-08 15:09:08] [INFO] [Logger] Logging system initialized
+[2025-05-08 15:09:08] [INFO] [Client] Starting client...
+[2025-05-08 15:09:08] [INFO] [MainServer] New connection accepted from: /127.0.0.1:51460 (Active connections: 1)
+[2025-05-08 15:09:08] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 15:09:08] [INFO] [FileManager] FileManager initialized
+[2025-05-08 15:09:08] [INFO] [FileManager] Verifying database tables
+[2025-05-08 15:09:08] [INFO] [FileManager] Database tables verified
+[2025-05-08 15:09:08] [INFO] [ClientHandler] New client connected: /127.0.0.1:51460
+[2025-05-08 15:09:11] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-08 15:09:11] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-08 15:09:14] [INFO] [ClientHandler] Mohan issued command: LOGS 10
+[2025-05-08 15:09:14] [INFO] [DBLogger] Initializing database logger - tables should be already created
+[2025-05-08 15:09:14] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-08 15:09:14] [INFO] [DBLogger] Retrieved 10 log entries
+[2025-05-08 15:09:23] [INFO] [ClientHandler] Mohan issued command: LOGS 20
+[2025-05-08 15:09:23] [INFO] [DBLogger] Retrieved 20 log entries
+[2025-05-08 15:10:22] [INFO] [Logger] Logging system shutting down
+[2025-05-08 15:10:22] [INFO] [Logger] Logging system shutting down
+[2025-05-08 15:10:22] [INFO] [MainServer] Server shutting down...

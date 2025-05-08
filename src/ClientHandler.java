@@ -70,7 +70,7 @@ public class ClientHandler implements Runnable {
 
         try {
             // Configure socket for better stability
-            configureSocket();
+            SocketUtils.configureStandardSocket(socket);
 
             // Create IO streams
             createStreams();
@@ -95,15 +95,6 @@ public class ClientHandler implements Runnable {
         } finally {
             cleanup();
         }
-    }
-
-    /**
-     * Configures the socket parameters
-     */
-    private void configureSocket() throws SocketException {
-        socket.setKeepAlive(true);
-        socket.setTcpNoDelay(true);
-        socket.setSoTimeout(SOCKET_TIMEOUT);
     }
 
     /**
@@ -218,7 +209,7 @@ public class ClientHandler implements Runnable {
 
         try {
             // Increase timeout for file operations
-            socket.setSoTimeout(FILE_TRANSFER_TIMEOUT);
+            SocketUtils.configureFileTransferSocket(socket);
 
             // Handle upload with clear protocol boundaries
             fileManager.receiveFile(uploadFilename, dataInputStream);
@@ -249,14 +240,14 @@ public class ClientHandler implements Runnable {
             }
 
             // Reset timeout to normal
-            socket.setSoTimeout(SOCKET_TIMEOUT);
+            SocketUtils.configureStandardSocket(socket);
         } catch (RuntimeException e) {
             logger.log(Logger.Level.ERROR, "ClientHandler", "Upload failed: " + e.getMessage(), e);
             writer.write(String.format(ERR_UPLOAD_FAILED, e.getMessage()) + "\n");
             writer.flush();
 
             // Reset timeout to normal
-            socket.setSoTimeout(SOCKET_TIMEOUT);
+            SocketUtils.configureStandardSocket(socket);
         }
     }
 
@@ -274,7 +265,7 @@ public class ClientHandler implements Runnable {
 
         try {
             // Increase timeout during file transfer
-            socket.setSoTimeout(FILE_TRANSFER_TIMEOUT);
+            SocketUtils.configureFileTransferSocket(socket);
 
             // Send the file
             fileManager.sendFile(downloadFilename, socket.getOutputStream());
@@ -301,14 +292,14 @@ public class ClientHandler implements Runnable {
             }
 
             // Reset timeout to normal
-            socket.setSoTimeout(SOCKET_TIMEOUT);
+            SocketUtils.configureStandardSocket(socket);
         } catch (RuntimeException e) {
             logger.log(Logger.Level.ERROR, "ClientHandler", "Error sending file: " + e.getMessage(), e);
             writer.write(String.format(ERR_DOWNLOAD_FAILED, e.getMessage()) + "\n");
             writer.flush();
 
             // Reset timeout to normal
-            socket.setSoTimeout(SOCKET_TIMEOUT);
+            SocketUtils.configureStandardSocket(socket);
         }
     }
 
@@ -382,10 +373,10 @@ public class ClientHandler implements Runnable {
      * Closes all resources safely
      */
     private void closeResources() {
-        safeClose(reader);
-        safeClose(writer);
-        safeClose(dataInputStream);
-        safeClose(dataOutputStream);
+        ResourceUtils.safeClose(reader, "reader", logger);
+        ResourceUtils.safeClose(writer, "writer", logger);
+        ResourceUtils.safeClose(dataInputStream, "data input stream", logger);
+        ResourceUtils.safeClose(dataOutputStream, "data output stream", logger);
 
         if (socket != null && !socket.isClosed()) {
             try {
@@ -397,18 +388,5 @@ public class ClientHandler implements Runnable {
         }
 
         logger.log(Logger.Level.INFO, "ClientHandler", "All resources cleaned up for client: " + clientName);
-    }
-
-    /**
-     * Safely closes an AutoCloseable resource
-     */
-    private void safeClose(AutoCloseable resource) {
-        if (resource != null) {
-            try {
-                resource.close();
-            } catch (Exception e) {
-                logger.log(Logger.Level.ERROR, "ClientHandler", "Error closing resource", e);
-            }
-        }
     }
 }

@@ -15,7 +15,8 @@ public class ConnectionPool {
     private final String dbUrl;
     private final List<Connection> connections;
     private final Semaphore semaphore;
-    private final int MAX_CONNECTIONS = 10;
+    // Reduced connection limit for better SQLite compatibility
+    private final int MAX_CONNECTIONS = 5;
     private final int CONNECTION_TIMEOUT_SECONDS = 30;
     private boolean initialized = false;
     private boolean databaseSchemaInitialized = false;
@@ -69,6 +70,10 @@ public class ConnectionPool {
             // Enable foreign keys for SQLite
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("PRAGMA foreign_keys = ON");
+                // Add SQLite optimizations for better concurrency
+                stmt.execute("PRAGMA journal_mode = WAL");
+                stmt.execute("PRAGMA synchronous = NORMAL");
+                stmt.execute("PRAGMA busy_timeout = 3000");
             }
 
             // Initialize all required tables
@@ -189,6 +194,14 @@ public class ConnectionPool {
             Connection conn = DriverManager.getConnection(dbUrl);
             // Set any needed connection properties
             conn.setAutoCommit(true);
+
+            // Apply SQLite optimizations
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("PRAGMA journal_mode = WAL");
+                stmt.execute("PRAGMA synchronous = NORMAL");
+                stmt.execute("PRAGMA busy_timeout = 3000");
+            }
+
             // Test the connection
             if (!conn.isValid(5)) {
                 throw new SQLException("Failed to create a valid connection");
@@ -227,7 +240,7 @@ public class ConnectionPool {
                     if (conn.isClosed() || !conn.isValid(2)) {
                         try {
                             System.out.println("[WARNING] Found invalid connection in pool, creating new one");
-                            conn.close();
+                            ResourceUtils.safeClose(conn);
                         } catch (Exception e) {
                             // Ignore errors when closing invalid connection
                         }
@@ -269,37 +282,27 @@ public class ConnectionPool {
                         connections.add(connection);
                     } else {
                         // Too many connections, just close this one
-                        try {
-                            connection.close();
-                        } catch (SQLException e) {
-                            System.err.println("[ERROR] Error closing excess connection: " + e.getMessage());
-                        }
+                        ResourceUtils.safeClose(connection, "excess connection", logger);
                     }
                 }
             } else {
                 // If connection is invalid, create a new one to replace it
-                try {
-                    connection.close(); // Close the bad connection
-                    synchronized (connections) {
-                        if (connections.size() < MAX_CONNECTIONS) {
-                            try {
-                                connections.add(createConnection()); // Add a new connection
-                            } catch (SQLException e) {
-                                System.err.println("[ERROR] Failed to create replacement connection: " + e.getMessage());
-                            }
+                ResourceUtils.safeClose(connection, "invalid connection", logger);
+                synchronized (connections) {
+                    if (connections.size() < MAX_CONNECTIONS) {
+                        try {
+                            connections.add(createConnection()); // Add a new connection
+                        } catch (SQLException e) {
+                            logger.log(Logger.Level.ERROR, "ConnectionPool",
+                                    "Failed to create replacement connection", e);
                         }
                     }
-                } catch (SQLException e) {
-                    System.err.println("[ERROR] Error closing invalid connection: " + e.getMessage());
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[ERROR] Error validating connection before release: " + e.getMessage());
-            try {
-                connection.close();
-            } catch (SQLException ex) {
-                // Ignore, we're already handling an error
-            }
+            logger.log(Logger.Level.ERROR, "ConnectionPool",
+                    "Error validating connection before release", e);
+            ResourceUtils.safeClose(connection);
         } finally {
             // Always release the semaphore
             semaphore.release();
@@ -311,11 +314,7 @@ public class ConnectionPool {
 
         synchronized (connections) {
             for (Connection connection : connections) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    System.err.println("[ERROR] Error closing connection: " + e.getMessage());
-                }
+                ResourceUtils.safeClose(connection, "database connection", logger);
             }
             connections.clear();
         }

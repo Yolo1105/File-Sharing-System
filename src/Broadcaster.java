@@ -32,13 +32,23 @@ public class Broadcaster {
     }
 
     /**
+     * Checks if the client is a utility connection (e.g., _upload, _download)
+     * Helper method to consolidate repeated checks
+     * @param clientName The client name to check
+     * @return true if the client is a utility connection, false otherwise
+     */
+    private boolean isUtilityConnection(String clientName) {
+        return Config.isUtilityConnection(clientName);
+    }
+
+    /**
      * Registers a new client and notifies other clients
      * @param clientName The name of the client to register
      * @param writer The writer stream for the client
      */
     public void register(String clientName, BufferedWriter writer) {
         // Don't register clients with special suffixes (_upload, _download, _verify)
-        if (Config.isUtilityConnection(clientName)) {
+        if (isUtilityConnection(clientName)) {
             logger.log(Logger.Level.INFO, "Broadcaster",
                     String.format(LOG_SKIPPING_NOTIFICATION, clientName));
             clientWriters.put(clientName, writer);
@@ -58,7 +68,7 @@ public class Broadcaster {
      */
     public void unregister(String clientName) {
         // Don't notify about utility connections
-        if (Config.isUtilityConnection(clientName)) {
+        if (isUtilityConnection(clientName)) {
             clientWriters.remove(clientName);
             return;
         }
@@ -96,7 +106,7 @@ public class Broadcaster {
             BufferedWriter writer = entry.getValue();
 
             // Skip utility connections and the excluded client
-            if (Config.isUtilityConnection(clientName) ||
+            if (isUtilityConnection(clientName) ||
                     (excludeClient != null && excludeClient.equals(clientName))) {
                 continue;
             }
@@ -131,7 +141,7 @@ public class Broadcaster {
      */
     public void broadcastFileUpload(String uploaderName, String filename) {
         // Skip notifications for utility connections
-        if (Config.isUtilityConnection(uploaderName)) {
+        if (isUtilityConnection(uploaderName)) {
             return;
         }
 
@@ -145,7 +155,7 @@ public class Broadcaster {
      */
     public void broadcastFileDownload(String downloaderName, String filename) {
         // Skip notifications for utility connections
-        if (Config.isUtilityConnection(downloaderName)) {
+        if (isUtilityConnection(downloaderName)) {
             return;
         }
 
@@ -159,7 +169,7 @@ public class Broadcaster {
     public int getConnectedClientsCount() {
         int count = 0;
         for (String key : clientWriters.keySet()) {
-            if (!Config.isUtilityConnection(key)) {
+            if (!isUtilityConnection(key)) {
                 count++;
             }
         }

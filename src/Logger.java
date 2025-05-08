@@ -38,6 +38,10 @@ public class Logger {
     private boolean debugMode = false;
     private boolean consoleOutput = true;
 
+    // Batch processing settings
+    private static final int FLUSH_THRESHOLD = 10;
+    private int entriesSinceFlush = 0;
+
     /**
      * Private constructor for singleton pattern
      */
@@ -92,10 +96,16 @@ public class Logger {
                         // Process one message or wait if queue is empty
                         String logEntry = logQueue.poll(500, java.util.concurrent.TimeUnit.MILLISECONDS);
                         if (logEntry != null) {
-                            // Write to file
+                            // Write to file with batched flushing
                             synchronized (logWriter) {
                                 logWriter.println(logEntry);
-                                logWriter.flush();
+                                entriesSinceFlush++;
+
+                                // Only flush periodically or when the queue is empty
+                                if (entriesSinceFlush >= FLUSH_THRESHOLD || logQueue.isEmpty()) {
+                                    logWriter.flush();
+                                    entriesSinceFlush = 0;
+                                }
                             }
                         }
                     } catch (InterruptedException e) {
@@ -232,7 +242,9 @@ public class Logger {
 
     /**
      * Utility method to log message to both file and console regardless of current settings
+     * @deprecated This method is not currently used but kept for potential future needs
      */
+    @Deprecated
     public static void console(Level level, String source, String message) {
         String formattedMsg = getInstance().formatLogEntry(level, source, message);
         if (level == Level.ERROR || level == Level.FATAL) {
@@ -270,7 +282,7 @@ public class Logger {
             // Final sync flush of any remaining entries
             synchronized (logWriter) {
                 logWriter.flush();
-                logWriter.close();
+                ResourceUtils.safeClose(logWriter);
             }
         } catch (Exception e) {
             System.err.println("Error closing logger: " + e.getMessage());

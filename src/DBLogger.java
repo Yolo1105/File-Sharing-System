@@ -20,6 +20,14 @@ public class DBLogger {
     private static final String ERR_RESET_FAILED = "Failed to reset database";
 
     /**
+     * Database operation functional interface for reducing duplication
+     */
+    @FunctionalInterface
+    private interface DatabaseOperation {
+        void execute(Connection connection) throws SQLException;
+    }
+
+    /**
      * Initializes the database and ensures the schema is correct
      */
     private static synchronized void initialize() {
@@ -31,12 +39,7 @@ public class DBLogger {
         // No need to create tables here anymore - ConnectionPool.initializeDatabaseSchema handles it
         try {
             // Just verify the table exists as a sanity check
-            ConnectionPool pool = ConnectionPool.getInstance();
-            Connection conn = null;
-
-            try {
-                conn = pool.getConnection();
-
+            withConnection(conn -> {
                 // Verify logs table exists
                 try (ResultSet rs = conn.getMetaData().getTables(null, null, "logs", null)) {
                     if (!rs.next()) {
@@ -48,14 +51,26 @@ public class DBLogger {
 
                 initialized = true;
                 logger.log(Logger.Level.INFO, "DBLogger", "Database logger initialized successfully");
-
-            } finally {
-                pool.releaseConnection(conn);
-            }
-        } catch (SQLException e) {
+            });
+        } catch (Exception e) {
             logger.log(Logger.Level.ERROR, "DBLogger", ERR_INIT_FAILED, e);
         } finally {
             initializing = false;
+        }
+    }
+
+    /**
+     * Helper method to standardize connection handling
+     */
+    private static void withConnection(DatabaseOperation operation) throws SQLException {
+        ConnectionPool pool = ConnectionPool.getInstance();
+        Connection conn = null;
+
+        try {
+            conn = pool.getConnection();
+            operation.execute(conn);
+        } finally {
+            pool.releaseConnection(conn);
         }
     }
 
@@ -84,28 +99,29 @@ public class DBLogger {
         // Generate current timestamp
         String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
 
-        // Prepare database operation
-        ConnectionPool pool = ConnectionPool.getInstance();
-        Connection conn = null;
+        // Final variables for lambda capture
+        final String finalClient = client;
+        final String finalAction = action;
+        final String finalFilename = filename;
+        final String finalTimestamp = timestamp;
 
         try {
-            conn = pool.getConnection();
-            try (PreparedStatement pstmt = conn.prepareStatement(
-                    "INSERT INTO logs (client, action, filename, timestamp) VALUES (?, ?, ?, ?)")) {
-                pstmt.setString(1, client);
-                pstmt.setString(2, action.toUpperCase());
-                pstmt.setString(3, filename);
-                pstmt.setString(4, timestamp);
-                pstmt.executeUpdate();
+            withConnection(conn -> {
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                        "INSERT INTO logs (client, action, filename, timestamp) VALUES (?, ?, ?, ?)")) {
+                    pstmt.setString(1, finalClient);
+                    pstmt.setString(2, finalAction.toUpperCase());
+                    pstmt.setString(3, finalFilename);
+                    pstmt.setString(4, finalTimestamp);
+                    pstmt.executeUpdate();
 
-                // Log successful operation
-                logger.log(Logger.Level.INFO, "DBLogger",
-                        "Logged: " + client + " " + action + " " + filename);
-            }
+                    // Log successful operation
+                    logger.log(Logger.Level.INFO, "DBLogger",
+                            "Logged: " + finalClient + " " + finalAction + " " + finalFilename);
+                }
+            });
         } catch (SQLException e) {
             logger.log(Logger.Level.ERROR, "DBLogger", ERR_LOG_FAILED, e);
-        } finally {
-            pool.releaseConnection(conn);
         }
     }
 
@@ -126,69 +142,67 @@ public class DBLogger {
         StringBuilder result = new StringBuilder();
         result.append("=== File Logs (Last ").append(safeLimit).append(" Actions) ===\n");
 
-        ConnectionPool pool = ConnectionPool.getInstance();
-        Connection conn = null;
-
         try {
-            conn = pool.getConnection();
-            try (PreparedStatement pstmt = conn.prepareStatement(
-                    "SELECT * FROM logs ORDER BY timestamp DESC LIMIT ?")) {
+            final int finalLimit = safeLimit;
+            final StringBuilder finalResult = result;
 
-                pstmt.setInt(1, safeLimit);
+            withConnection(conn -> {
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                        "SELECT * FROM logs ORDER BY timestamp DESC LIMIT ?")) {
 
-                try (ResultSet rs = pstmt.executeQuery()) {
-                    boolean hasLogs = false;
+                    pstmt.setInt(1, finalLimit);
 
-                    while (rs.next()) {
-                        hasLogs = true;
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        boolean hasLogs = false;
 
-                        // Get the values from database
-                        String timestamp = rs.getString("timestamp");
-                        String client = rs.getString("client");
-                        String action = rs.getString("action");
-                        String filename = rs.getString("filename");
+                        while (rs.next()) {
+                            hasLogs = true;
 
-                        // Parse timestamp and reformat to include year and date
-                        try {
-                            LocalDateTime dateTime = LocalDateTime.parse(timestamp, TIMESTAMP_FORMAT);
-                            String formattedTime = dateTime.format(DISPLAY_FORMAT);
+                            // Get the values from database
+                            String timestamp = rs.getString("timestamp");
+                            String client = rs.getString("client");
+                            String action = rs.getString("action");
+                            String filename = rs.getString("filename");
 
-                            // Clean up client name if needed
-                            if (client.contains("_")) {
-                                client = client.substring(0, client.indexOf("_"));
+                            // Parse timestamp and reformat to include year and date
+                            try {
+                                LocalDateTime dateTime = LocalDateTime.parse(timestamp, TIMESTAMP_FORMAT);
+                                String formattedTime = dateTime.format(DISPLAY_FORMAT);
+
+                                // Clean up client name if needed
+                                if (client.contains("_")) {
+                                    client = client.substring(0, client.indexOf("_"));
+                                }
+
+                                // Format the log entry with year and date included
+                                finalResult.append("[").append(formattedTime).append("] ")
+                                        .append(client).append(" ")
+                                        .append(action).append(": ")
+                                        .append(filename).append("\n");
+
+                            } catch (Exception e) {
+                                // If any error in formatting, fall back to original format
+                                finalResult.append("[").append(timestamp).append("] ")
+                                        .append(client).append(" ")
+                                        .append(action).append(": ")
+                                        .append(filename).append("\n");
+
+                                logger.log(Logger.Level.WARNING, "DBLogger",
+                                        "Error formatting log entry: " + e.getMessage());
                             }
+                        }
 
-                            // Format the log entry with year and date included
-                            result.append("[").append(formattedTime).append("] ")
-                                    .append(client).append(" ")
-                                    .append(action).append(": ")
-                                    .append(filename).append("\n");
-
-                        } catch (Exception e) {
-                            // If any error in formatting, fall back to original format
-                            result.append("[").append(timestamp).append("] ")
-                                    .append(client).append(" ")
-                                    .append(action).append(": ")
-                                    .append(filename).append("\n");
-
-                            logger.log(Logger.Level.WARNING, "DBLogger",
-                                    "Error formatting log entry: " + e.getMessage());
+                        if (!hasLogs) {
+                            finalResult.append("No logs found.\n");
                         }
                     }
-
-                    if (!hasLogs) {
-                        result.append("No logs found.\n");
-                    }
                 }
-            }
 
-            logger.log(Logger.Level.INFO, "DBLogger", "Retrieved " + safeLimit + " log entries");
-
+                logger.log(Logger.Level.INFO, "DBLogger", "Retrieved " + finalLimit + " log entries");
+            });
         } catch (SQLException e) {
             logger.log(Logger.Level.ERROR, "DBLogger", ERR_LOGS_FAILED, e);
             result.append("ERROR: ").append(ERR_LOGS_FAILED).append(": ").append(e.getMessage()).append("\n");
-        } finally {
-            pool.releaseConnection(conn);
         }
 
         return result.toString();
@@ -196,34 +210,32 @@ public class DBLogger {
 
     /**
      * Resets the database by dropping and recreating the logs table
+     * @deprecated This method is not currently used but kept for potential future maintenance
      */
+    @Deprecated
     public static void resetDatabase() {
         logger.log(Logger.Level.WARNING, "DBLogger", "Resetting logs database table");
 
-        ConnectionPool pool = ConnectionPool.getInstance();
-        Connection conn = null;
-
         try {
-            conn = pool.getConnection();
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("DROP TABLE IF EXISTS logs");
-                stmt.executeUpdate("""
-                    CREATE TABLE logs (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        client TEXT NOT NULL,
-                        action TEXT NOT NULL,
-                        filename TEXT NOT NULL,
-                        timestamp TEXT NOT NULL
-                    )
-                """);
+            withConnection(conn -> {
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.executeUpdate("DROP TABLE IF EXISTS logs");
+                    stmt.executeUpdate("""
+                        CREATE TABLE logs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            client TEXT NOT NULL,
+                            action TEXT NOT NULL,
+                            filename TEXT NOT NULL,
+                            timestamp TEXT NOT NULL
+                        )
+                    """);
 
-                initialized = true;
-                logger.log(Logger.Level.INFO, "DBLogger", "Database reset successfully");
-            }
+                    initialized = true;
+                    logger.log(Logger.Level.INFO, "DBLogger", "Database reset successfully");
+                }
+            });
         } catch (SQLException e) {
             logger.log(Logger.Level.ERROR, "DBLogger", ERR_RESET_FAILED, e);
-        } finally {
-            pool.releaseConnection(conn);
         }
     }
 }

@@ -7,6 +7,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainServer {
@@ -59,14 +60,26 @@ public class MainServer {
                 System.exit(1);
             }
 
-            // Create an improved thread pool with a queue
+            // Create an improved thread pool with a wait policy instead of CallerRunsPolicy
+            RejectedExecutionHandler waitPolicy = (r, executor) -> {
+                try {
+                    // Wait for space in the queue rather than rejecting outright
+                    // This prevents the main thread from executing the task directly
+                    executor.getQueue().put(r);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    logger.log(Logger.Level.ERROR, "MainServer",
+                            "Thread interrupted while waiting to queue task");
+                }
+            };
+
             threadPool = new ThreadPoolExecutor(
                     corePoolSize,                    // Core pool size
                     maxThreads,                      // Maximum pool size
                     60L, TimeUnit.SECONDS,           // Keep alive time for idle threads
                     new LinkedBlockingQueue<>(100),  // Queue for waiting tasks
                     Executors.defaultThreadFactory(),
-                    new ThreadPoolExecutor.CallerRunsPolicy() // If queue is full, caller thread executes the task
+                    waitPolicy                       // Custom rejection policy
             );
 
             System.out.println(String.format(INFO_STARTING, port, corePoolSize, maxThreads));
@@ -230,7 +243,9 @@ public class MainServer {
     /**
      * Gets the current active connection count
      * @return Number of active connections
+     * @deprecated This method is for monitoring purposes but is not currently used
      */
+    @Deprecated
     public static int getActiveConnections() {
         return activeConnections.get();
     }

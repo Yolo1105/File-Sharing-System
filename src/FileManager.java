@@ -11,21 +11,17 @@ public class FileManager {
     private static final int BUFFER_SIZE = Config.getBufferSize();
     private static final AtomicBoolean tablesVerified = new AtomicBoolean(false);
 
-    // Error message constants
+    // Error message constants - consolidated and cleaned up
     private static final String ERR_DECODE_FILENAME = "Failed to decode filename";
     private static final String ERR_FILE_TRANSFER = "File transfer failed";
-    private static final String ERR_SAVE_FILE = "Failed to save file to database";
-    private static final String ERR_RETRIEVE_FILE = "Failed to retrieve file from database";
     private static final String ERR_FILE_NOT_FOUND = "File not found in database";
-    private static final String ERR_LIST_FILES = "Failed to list files";
     private static final String ERR_INVALID_FILE_SIZE = "Invalid file size";
     private static final String ERR_INVALID_CHECKSUM = "Invalid checksum length";
     private static final String ERR_CHECKSUM_VERIFICATION = "Checksum verification failed";
-    private static final String ERR_NON_TXT_FILE = "Only .txt files are allowed";
+    private static final String ERR_ONLY_TXT_FILE = "Only .txt files are allowed";
 
     // Success messages
     private static final String SUCCESS_FILE_SAVED = "File saved to database";
-    private static final String SUCCESS_FILE_SENT = "File sent successfully";
     private static final String SUCCESS_FILE_RECEIVED = "File received successfully";
 
     /**
@@ -55,6 +51,32 @@ public class FileManager {
     }
 
     /**
+     * Database operation functional interface for reducing duplication
+     */
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+        T execute(Connection connection) throws SQLException;
+    }
+
+    /**
+     * Helper method to standardize database operations
+     */
+    private <T> T withConnection(DatabaseOperation<T> operation, T defaultValue) {
+        ConnectionPool pool = ConnectionPool.getInstance();
+        Connection conn = null;
+
+        try {
+            conn = pool.getConnection();
+            return operation.execute(conn);
+        } catch (SQLException e) {
+            logger.log(Logger.Level.ERROR, "FileManager", "Database operation failed", e);
+            return defaultValue;
+        } finally {
+            pool.releaseConnection(conn);
+        }
+    }
+
+    /**
      * Receives a file from a client and stores it in the database
      * @param encodedFileName URL-encoded filename
      * @param dataIn Input stream for file data
@@ -70,7 +92,7 @@ public class FileManager {
             // Check for .txt extension
             if (!fileName.toLowerCase().endsWith(".txt")) {
                 logger.log(Logger.Level.ERROR, "FileManager", "Rejected non-txt file: " + fileName);
-                throw new RuntimeException(ERR_NON_TXT_FILE);
+                throw new RuntimeException(ERR_ONLY_TXT_FILE);
             }
         } catch (UnsupportedEncodingException e) {
             logger.log(Logger.Level.ERROR, "FileManager", ERR_DECODE_FILENAME, e);
@@ -177,12 +199,7 @@ public class FileManager {
      */
     private void saveFileToDatabase(String fileName, byte[] content, long fileSize, byte[] checksum)
             throws SQLException {
-        ConnectionPool pool = ConnectionPool.getInstance();
-        Connection conn = null;
-
-        try {
-            conn = pool.getConnection();
-
+        withConnection(conn -> {
             // First try to delete if file exists
             try (PreparedStatement pstmt = conn.prepareStatement("DELETE FROM files WHERE filename = ?")) {
                 pstmt.setString(1, fileName);
@@ -200,9 +217,8 @@ public class FileManager {
 
                 logger.log(Logger.Level.INFO, "FileManager", SUCCESS_FILE_SAVED + ": " + fileName);
             }
-        } finally {
-            pool.releaseConnection(conn);
-        }
+            return null;
+        }, null);
     }
 
     /**
@@ -263,11 +279,11 @@ public class FileManager {
             dataOut.write(fileData.content);
             dataOut.flush();
 
-            logger.log(Logger.Level.INFO, "FileManager", SUCCESS_FILE_SENT + ": " + fileName);
+            logger.log(Logger.Level.INFO, "FileManager", "File sent successfully: " + fileName);
 
         } catch (IOException | SQLException e) {
-            logger.log(Logger.Level.ERROR, "FileManager", ERR_RETRIEVE_FILE + ": " + fileName, e);
-            throw new RuntimeException(ERR_RETRIEVE_FILE + ": " + fileName, e);
+            logger.log(Logger.Level.ERROR, "FileManager", "Error retrieving file: " + fileName, e);
+            throw new RuntimeException("Failed to retrieve file: " + fileName, e);
         }
     }
 
@@ -292,12 +308,7 @@ public class FileManager {
      * @return FileData object containing file content and metadata, or null if not found
      */
     private FileData getFileFromDatabase(String fileName) throws SQLException {
-        ConnectionPool pool = ConnectionPool.getInstance();
-        Connection conn = null;
-
-        try {
-            conn = pool.getConnection();
-
+        return withConnection(conn -> {
             try (PreparedStatement pstmt = conn.prepareStatement(
                     "SELECT content, file_size, checksum FROM files WHERE filename = ?")) {
                 pstmt.setString(1, fileName);
@@ -312,11 +323,8 @@ public class FileManager {
                     }
                 }
             }
-
             return null; // File not found
-        } finally {
-            pool.releaseConnection(conn);
-        }
+        }, null);
     }
 
     /**
@@ -324,11 +332,7 @@ public class FileManager {
      * @return String representation of the file list
      */
     public String listFiles() {
-        ConnectionPool pool = ConnectionPool.getInstance();
-        Connection conn = null;
-
-        try {
-            conn = pool.getConnection();
+        return withConnection(conn -> {
             StringBuilder sb = new StringBuilder();
             sb.append("Available files:\n");
 
@@ -355,12 +359,7 @@ public class FileManager {
             }
 
             return sb.toString();
-        } catch (SQLException e) {
-            logger.log(Logger.Level.ERROR, "FileManager", ERR_LIST_FILES, e);
-            return "Error listing files: " + e.getMessage();
-        } finally {
-            pool.releaseConnection(conn);
-        }
+        }, "Error listing files. Please try again later.");
     }
 
     /**

@@ -61,7 +61,6 @@ public class Client {
     private static final String INFO_REQUEST_LIST = "Requesting file list from server...";
     private static final String INFO_REQUEST_LOGS = "Requesting %d recent logs from server...";
     private static final String SUCCESS_UPLOADED = "File '%s' was successfully uploaded to the server database.";
-    private static final String SUCCESS_DOWNLOAD = "[SUCCESS] File saved to: %s";
 
     private static final String PROMPT = "> ";
     private static final String CLIENT_FILES_DIR = "client_files/";
@@ -75,7 +74,7 @@ public class Client {
 
         try (Socket socket = new Socket(serverHost, serverPort)) {
             // Configure socket for better stability
-            configureSocket(socket);
+            SocketUtils.configureStandardSocket(socket);
 
             System.out.println(String.format(INFO_CONNECTED, serverHost, serverPort));
             logger.log(Logger.Level.INFO, "Client", String.format(INFO_CONNECTED, serverHost, serverPort));
@@ -118,15 +117,6 @@ public class Client {
             System.out.println(String.format(ERR_CONNECTION_ERROR, e.getMessage()));
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Configures socket parameters for optimal performance
-     */
-    private static void configureSocket(Socket socket) throws SocketException {
-        socket.setKeepAlive(true);
-        socket.setTcpNoDelay(true);
-        socket.setSoTimeout(SOCKET_TIMEOUT);
     }
 
     /**
@@ -334,9 +324,7 @@ public class Client {
         // Create a new socket for the file transfer
         try (Socket uploadSocket = new Socket(serverHost, serverPort)) {
             // Configure upload socket with longer timeout for larger files
-            uploadSocket.setKeepAlive(true);
-            uploadSocket.setTcpNoDelay(true);
-            uploadSocket.setSoTimeout(FILE_TRANSFER_TIMEOUT);
+            SocketUtils.configureFileTransferSocket(uploadSocket);
 
             // Create streams for the upload socket
             BufferedReader uploadReader = new BufferedReader(
@@ -435,9 +423,7 @@ public class Client {
         // Create a dedicated connection for downloading
         try (Socket downloadSocket = new Socket(serverHost, serverPort)) {
             // Configure download socket
-            downloadSocket.setKeepAlive(true);
-            downloadSocket.setTcpNoDelay(true);
-            downloadSocket.setSoTimeout(FILE_TRANSFER_TIMEOUT);
+            SocketUtils.configureFileTransferSocket(downloadSocket);
 
             // Create streams with larger buffers
             BufferedReader downloadReader = new BufferedReader(
@@ -552,7 +538,7 @@ public class Client {
 
                 if (renamed) {
                     System.out.println(String.format(INFO_DOWNLOAD_SAVED, filename));
-                    System.out.println(String.format(SUCCESS_DOWNLOAD, outFile.getAbsolutePath()));
+                    System.out.println(String.format(INFO_FILE_PATH, outFile.getAbsolutePath()));
                 } else {
                     System.out.println(ERR_SAVE_FAILED);
                     tempFile.delete();
