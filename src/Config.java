@@ -55,7 +55,7 @@ public class Config {
     }
 
     private static void setDefaults() {
-        properties.setProperty("server.port", "12345");
+        properties.setProperty("server.port", "9000");
         properties.setProperty("server.max_threads", "50");
         properties.setProperty("files.directory", "server_files/");
         properties.setProperty("db.url", "jdbc:sqlite:file_logs.db");
@@ -118,7 +118,7 @@ public class Config {
     }
 
     public static int getServerPort() {
-        return getIntProperty("server.port", 12345);
+        return getIntProperty("server.port", 9000);
     }
 
     public static int getMaxThreads() {
@@ -182,7 +182,7 @@ public class Config {
         if (!configFile.exists()) {
             try {
                 Properties defaultProps = new Properties();
-                defaultProps.setProperty("server.port", "12345");
+                defaultProps.setProperty("server.port", "9000");
                 defaultProps.setProperty("server.max_threads", "50");
                 defaultProps.setProperty("files.directory", "server_files/");
                 defaultProps.setProperty("db.url", "jdbc:sqlite:file_logs.db");

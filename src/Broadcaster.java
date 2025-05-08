@@ -29,8 +29,8 @@ public class Broadcaster {
         clientWriters.put(clientName, writer);
         logger.log(Logger.Level.INFO, "Broadcaster", "Registered client: " + clientName);
 
-        // Notify other clients about the new user with a more visible notification
-        broadcast("\n@SERVER_NOTIFICATION:" + clientName + " has joined the server.\n", clientName);
+        // Notify other clients about the new user with a clear notification format
+        broadcast("SERVER_NOTIFICATION: " + clientName + " has joined the server.\n", clientName);
     }
 
     /**
@@ -47,7 +47,7 @@ public class Broadcaster {
             logger.log(Logger.Level.INFO, "Broadcaster", "Unregistered client: " + clientName);
 
             // Notify other clients that a user has left
-            broadcast("\n@SERVER_NOTIFICATION:" + clientName + " has left the server.\n", null);
+            broadcast("SERVER_NOTIFICATION: " + clientName + " has left the server.\n", null);
         }
     }
 
@@ -106,7 +106,7 @@ public class Broadcaster {
             return;
         }
 
-        broadcast("\n@SERVER_NOTIFICATION:" + uploaderName + " uploaded file: " + filename + "\n", null);
+        broadcast("SERVER_NOTIFICATION: " + uploaderName + " uploaded file: " + filename + "\n", null);
     }
 
     /**
@@ -120,7 +120,7 @@ public class Broadcaster {
             return;
         }
 
-        broadcast("\n@SERVER_NOTIFICATION:" + downloaderName + " downloaded file: " + filename + "\n", null);
+        broadcast("SERVER_NOTIFICATION: " + downloaderName + " downloaded file: " + filename + "\n", null);
     }
 
     /**
@@ -128,6 +128,12 @@ public class Broadcaster {
      * @return Number of connected clients
      */
     public int getConnectedClientsCount() {
-        return clientWriters.size();
+        int count = 0;
+        for (String key : clientWriters.keySet()) {
+            if (!key.contains("_upload") && !key.contains("_download") && !key.contains("_verify")) {
+                count++;
+            }
+        }
+        return count;
     }
 }

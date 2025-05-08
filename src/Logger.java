@@ -17,7 +17,7 @@ public class Logger {
     private static final String LOG_FILE = "server.log";
     private static final Logger instance = new Logger();
     private PrintWriter logWriter;
-    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     // Queue for asynchronous logging
     private final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<>();

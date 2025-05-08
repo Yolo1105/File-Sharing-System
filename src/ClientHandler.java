@@ -64,7 +64,7 @@ public class ClientHandler implements Runnable {
                 return;
             }
 
-            writer.write("You can now use: UPLOAD <filename>, DOWNLOAD <filename>, LIST, VIEWLOGS, EXIT\n");
+            writer.write("You can now use: UPLOAD <filename>, DOWNLOAD <filename>, LIST\n");
             writer.flush();
 
             String line;
@@ -207,49 +207,18 @@ public class ClientHandler implements Runnable {
                         case "LIST":
                             String fileList = fileManager.listFiles();
 
-                            // Check if there are no files to report a clearer message
+                            // Add a clear end marker to help client know when response is complete
                             if (fileList.contains("No files available")) {
-                                writer.write("Available files:\nNo files available on the server.\n\n");
+                                writer.write("Available files:\nNo files available on the server.\n*END*\n");
                             } else {
-                                // Send the file list with a clear boundary line at the end
-                                writer.write(fileList);
-                                writer.write("--- End of file list ---\n\n");
+                                // Send the file list with a clear end marker
+                                writer.write(fileList.trim() + "\n*END*\n");
                             }
                             writer.flush();
-                            break;
-
-                        case "VIEWLOGS":
-                            try {
-                                String logs = getRecentLogs(50);
-
-                                writer.write(logs);
-                                writer.write("--- End of logs ---\n\n");
-                                writer.flush();
-                            } catch (Exception e) {
-                                logger.log(Logger.Level.ERROR, "ClientHandler", "Error retrieving logs: " + e.getMessage(), e);
-                                writer.write("ERROR: Failed to retrieve logs: " + e.getMessage() + "\n");
-                                writer.flush();
-                            }
-                            break;
-
-                        case "EXIT":
-                            logger.log(Logger.Level.INFO, "ClientHandler", "Client requested exit: " + clientName);
-
-                            // Important: set running to false to exit the while loop
-                            running = false;
-
-                            // Send a goodbye message
-                            writer.write("Goodbye! Your connection will now close.\n");
-                            writer.flush();
-
-                            // Only unregister regular clients, not special connections
-                            if (!clientName.contains("_upload") && !clientName.contains("_download") && !clientName.contains("_verify")) {
-                                broadcaster.unregister(clientName);
-                            }
                             break;
 
                         default:
-                            writer.write("Unknown command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST, VIEWLOGS, EXIT\n");
+                            writer.write("Unknown command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST\n");
                             writer.flush();
                             break;
                     }
@@ -293,102 +262,6 @@ public class ClientHandler implements Runnable {
             logger.log(Logger.Level.INFO, "ClientHandler", "All resources cleaned up for client: " + clientName);
         } catch (IOException e) {
             logger.log(Logger.Level.ERROR, "ClientHandler", "Error closing resources", e);
-        }
-    }
-
-    private String getRecentLogs(int limit) {
-        try {
-            // Create a direct connection to the database
-            try (java.sql.Connection conn = java.sql.DriverManager.getConnection(Config.getDbUrl());
-                 java.sql.Statement stmt = conn.createStatement()) {
-
-                // Check if logs table exists and has correct schema
-                boolean tableExists = false;
-                try (java.sql.ResultSet rs = conn.getMetaData().getTables(null, null, "logs", null)) {
-                    tableExists = rs.next();
-                }
-
-                if (!tableExists) {
-                    stmt.executeUpdate("""
-                        CREATE TABLE logs (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            client TEXT NOT NULL,
-                            action TEXT NOT NULL,
-                            filename TEXT NOT NULL,
-                            timestamp TEXT NOT NULL
-                        )
-                    """);
-                    return "=== File Logs (Last 50 Actions) ===\nNo logs found.\n";
-                }
-
-                // Check if client column exists
-                boolean hasClientColumn = false;
-                try (java.sql.ResultSet rs = stmt.executeQuery("PRAGMA table_info(logs)")) {
-                    while (rs.next()) {
-                        if ("client".equalsIgnoreCase(rs.getString("name"))) {
-                            hasClientColumn = true;
-                            break;
-                        }
-                    }
-                }
-
-                // Rebuild table if client column is missing
-                if (!hasClientColumn) {
-                    // Create backup of existing table
-                    stmt.executeUpdate("CREATE TABLE logs_backup AS SELECT * FROM logs");
-                    stmt.executeUpdate("DROP TABLE logs");
-                    stmt.executeUpdate("""
-                        CREATE TABLE logs (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            client TEXT NOT NULL,
-                            action TEXT NOT NULL,
-                            filename TEXT NOT NULL,
-                            timestamp TEXT NOT NULL
-                        )
-                    """);
-
-                    // Try to migrate data
-                    try {
-                        stmt.executeUpdate("""
-                            INSERT INTO logs (client, action, filename, timestamp)
-                            SELECT 'Unknown', action, filename, timestamp FROM logs_backup
-                        """);
-                    } catch (Exception e) {
-                        // Migration failed, but we can continue with empty table
-                    }
-                }
-
-                // Get logs from the table
-                StringBuilder builder = new StringBuilder();
-                builder.append("=== File Logs (Last 50 Actions) ===\n");
-
-                try (java.sql.ResultSet rs = stmt.executeQuery(
-                        "SELECT * FROM logs ORDER BY timestamp DESC LIMIT " + limit)) {
-                    boolean hasLogs = false;
-
-                    while (rs.next()) {
-                        hasLogs = true;
-                        builder.append("[")
-                                .append(rs.getString("timestamp"))
-                                .append("] ")
-                                .append(rs.getString("client"))
-                                .append(" ")
-                                .append(rs.getString("action"))
-                                .append(": ")
-                                .append(rs.getString("filename"))
-                                .append("\n");
-                    }
-
-                    if (!hasLogs) {
-                        builder.append("No logs found.\n");
-                    }
-                }
-
-                return builder.toString();
-            }
-        } catch (Exception e) {
-            logger.log(Logger.Level.ERROR, "ClientHandler", "Failed to retrieve logs: " + e.getMessage(), e);
-            return "=== File Logs (Last 50 Actions) ===\nError retrieving logs: " + e.getMessage() + "\n";
         }
     }
 }

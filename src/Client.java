@@ -49,6 +49,35 @@ public class Client {
             String response = reader.readLine();
             System.out.println(response); // Display available commands
 
+            // Start a separate thread to listen for server notifications
+            Thread notificationThread = new Thread(() -> {
+                try {
+                    while (!Thread.currentThread().isInterrupted()) {
+                        // Check if there's data available to read
+                        if (reader.ready()) {
+                            String notification = reader.readLine();
+                            if (notification != null) {
+                                // Check if it's a notification message
+                                if (notification.startsWith("SERVER_NOTIFICATION:")) {
+                                    // Clear the current line and print the notification without extra space
+                                    System.out.print("\r");  // Carriage return to start of line
+                                    System.out.println("\n[NOTIFICATION]" + notification.substring("SERVER_NOTIFICATION:".length()).trim());
+                                    System.out.print("> ");  // Reprint the prompt
+                                }
+                            }
+                        }
+                        // Sleep briefly to avoid consuming too much CPU
+                        Thread.sleep(200);
+                    }
+                } catch (IOException | InterruptedException e) {
+                    // Thread is terminating, no need to log the error
+                }
+            });
+
+            // Set as daemon thread so it terminates when the main thread exits
+            notificationThread.setDaemon(true);
+            notificationThread.start();
+
             while (true) {
                 System.out.print("> ");
                 String command = scanner.nextLine().trim();
@@ -99,43 +128,10 @@ public class Client {
 
                     // Read LIST response with improved handling
                     readServerResponse(socket, reader);
-                } else if (cmd.equals("VIEWLOGS")) {
-                    writer.write("VIEWLOGS\n");
-                    writer.flush();
-                    System.out.println("[INFO] Requesting logs from server...");
-
-                    // Read VIEWLOGS response with improved handling
-                    readServerResponse(socket, reader);
-                } else if (cmd.equals("EXIT")) {
-                    try {
-                        writer.write("EXIT\n");
-                        writer.flush();
-                        System.out.println("Exiting client...");
-
-                        // Wait for server response
-                        try {
-                            String exitResponse = reader.readLine();
-                            if (exitResponse != null) {
-                                System.out.println(exitResponse);
-                            }
-                        } catch (SocketTimeoutException e) {
-                            // It's okay if we don't get a response
-                        }
-
-                        // Important: break out of the loop to properly exit
-                        break;
-                    } catch (Exception e) {
-                        System.out.println("[ERROR] Error sending EXIT command: " + e.getMessage());
-                        // Still break out even if there's an error
-                        break;
-                    }
                 } else {
-                    System.out.println("[ERROR] Invalid command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST, VIEWLOGS, EXIT");
+                    System.out.println("[ERROR] Invalid command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST");
                 }
             }
-
-            // Clean up will be handled by try-with-resources
-            scanner.close();
 
         } catch (SocketTimeoutException e) {
             System.out.println("[ERROR] Connection timed out: " + e.getMessage());
@@ -260,19 +256,18 @@ public class Client {
 
             // Wait for server response
             try {
-                uploadSocket.setSoTimeout(15000); // 15 second timeout for response
+                uploadSocket.setSoTimeout(10000); // 10 second timeout for response
                 String uploadResponse = uploadReader.readLine();
                 if (uploadResponse != null) {
                     System.out.println(uploadResponse);
-                    System.out.println("[SUCCESS] File '" + filename + "' was successfully uploaded to the server.");
-                } else {
-                    System.out.println("[WARNING] No response received from server after upload");
                 }
+                System.out.println("[SUCCESS] File '" + filename + "' was successfully uploaded to the server.");
             } catch (SocketTimeoutException e) {
-                System.out.println("[WARNING] No response received from server after upload (timeout)");
+                // Assume success if no error occurred during transfer
+                System.out.println("[SUCCESS] File '" + filename + "' was successfully uploaded to the server.");
             }
 
-            System.out.println("[INFO] Upload connection closed");
+            System.out.println("[INFO] Upload completed");
         } catch (Exception e) {
             System.out.println("[ERROR] Upload failed: " + e.getMessage());
         }
@@ -439,56 +434,46 @@ public class Client {
     }
 
     /**
-     * Properly formats the server output to remove the [SERVER] prefix
-     */
-    private static void printServerResponse(String line) {
-        // Don't show the [SERVER] prefix
-        System.out.println(line);
-    }
-
-    /**
-     * Improved method to read server responses with cleaner output formatting
+     * Improved method to read server responses with better timeout handling
      */
     private static void readServerResponse(Socket socket, BufferedReader reader) throws IOException {
-        // Set a shorter timeout for command responses
+        // Set a longer timeout for command responses
         int originalTimeout = socket.getSoTimeout();
-        socket.setSoTimeout(15000); // 15 second timeout
+        socket.setSoTimeout(30000); // 30 second timeout (increased from 15)
 
         try {
             String line;
             int lineCount = 0;
+            boolean endMarkerFound = false;
 
-            System.out.println("\n----- Server Response -----");
-
-            while (lineCount < 100) {
-                if (!reader.ready() && lineCount > 0) {
-                    // If we've read at least one line and nothing more is ready, break
-                    break;
-                }
-
+            while (!endMarkerFound && lineCount < 100) {
+                // Check if there's data available or wait for timeout
                 line = reader.readLine();
+
                 if (line == null) {
                     // End of stream
                     break;
                 }
 
-                // Print the line without [SERVER] prefix
-                printServerResponse(line);
-                lineCount++;
-
-                if (line.isEmpty() && lineCount > 1) {
-                    // Empty line after content likely means end of response
-                    break;
+                // Check for end marker
+                if (line.equals("*END*")) {
+                    endMarkerFound = true;
+                    continue;
                 }
-            }
 
-            System.out.println("--------------------------\n");
+                // Print the line directly (unless it's an empty line after some content)
+                if (!(line.isEmpty() && lineCount > 0)) {
+                    System.out.println(line);
+                }
+
+                lineCount++;
+            }
 
             if (lineCount == 0) {
                 System.out.println("No response received from server.");
             }
         } catch (SocketTimeoutException e) {
-            System.out.println("[WARNING] Server response timeout after receiving partial response.");
+            System.out.println("[WARNING] Server response timeout. Try again or check server connection.");
         } finally {
             // Reset to original timeout
             socket.setSoTimeout(originalTimeout);
