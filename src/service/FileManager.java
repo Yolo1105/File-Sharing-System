@@ -1,7 +1,6 @@
 package service;
 
 import database.ConnectionManager;
-import utils.FileValidationUtils;
 import logs.Logger;
 
 import java.io.*;
@@ -36,18 +35,10 @@ public class FileManager {
     private static final String SUCCESS_FILE_SAVED = "File saved to database";
     private static final String SUCCESS_FILE_RECEIVED = "File received successfully";
 
-    /**
-     * Constructor - initializes the FileManager instance
-     */
     public FileManager() {
         logger.log(Logger.Level.INFO, "FileManager", "FileManager initialized");
     }
 
-    /**
-     * Verifies the database tables needed for file storage
-     * This is now a lightweight method that just marks tables as verified
-     * since the actual creation is handled by ConnectionManager
-     */
     public void verifyDatabaseTables() {
         if (tablesVerified.get()) {
             logger.log(Logger.Level.DEBUG, "FileManager", "Database tables already verified");
@@ -56,23 +47,15 @@ public class FileManager {
 
         logger.log(Logger.Level.INFO, "FileManager", "Verifying database tables");
 
-        // Actual table creation is now handled by ConnectionManager.initializeDatabaseSchema()
-        // Just mark them as verified here
         tablesVerified.set(true);
         logger.log(Logger.Level.INFO, "FileManager", "Database tables verified");
     }
 
-    /**
-     * Database operation functional interface for reducing duplication
-     */
     @FunctionalInterface
     private interface DatabaseOperation<T> {
         T execute(Connection connection) throws SQLException;
     }
 
-    /**
-     * Helper method to standardize database operations
-     */
     private <T> T withConnection(DatabaseOperation<T> operation, T defaultValue) {
         ConnectionManager pool = ConnectionManager.getInstance();
         Connection conn = null;
@@ -88,11 +71,6 @@ public class FileManager {
         }
     }
 
-    /**
-     * Receives a file from a client and stores it in the database
-     * @param encodedFileName URL-encoded filename
-     * @param dataIn Input stream for file data
-     */
     public void receiveFile(String encodedFileName, DataInputStream dataIn) {
         logger.log(Logger.Level.INFO, "FileManager", "Starting file reception for: " + encodedFileName);
 
@@ -161,12 +139,6 @@ public class FileManager {
         }
     }
 
-    /**
-     * Reads file content from an input stream
-     * @param dataIn Data input stream
-     * @param fileSize Expected file size
-     * @return Byte array containing the file content
-     */
     private byte[] readFileContent(DataInputStream dataIn, long fileSize) throws IOException {
         ByteArrayOutputStream fileBuffer = new ByteArrayOutputStream();
         byte[] buffer = new byte[BUFFER_SIZE];
@@ -194,21 +166,12 @@ public class FileManager {
         return fileBuffer.toByteArray();
     }
 
-    /**
-     * Helper method to check checksums
-     * @param fileContent The file content
-     * @param expectedChecksum The expected checksum
-     * @return true if checksums match, false otherwise
-     */
     private boolean doChecksumVerification(byte[] fileContent, byte[] expectedChecksum)
             throws NoSuchAlgorithmException {
         byte[] actualChecksum = calculateChecksum(fileContent);
         return MessageDigest.isEqual(expectedChecksum, actualChecksum);
     }
 
-    /**
-     * Saves a file to the database
-     */
     private void saveFileToDatabase(String fileName, byte[] content, long fileSize, byte[] checksum)
             throws SQLException {
         withConnection(conn -> {
@@ -233,11 +196,6 @@ public class FileManager {
         }, null);
     }
 
-    /**
-     * Sends a file to a client
-     * @param encodedFileName URL-encoded filename
-     * @param outputStream Output stream to send file data
-     */
     public void sendFile(String encodedFileName, OutputStream outputStream) {
         String fileName;
         try {
@@ -299,9 +257,6 @@ public class FileManager {
         }
     }
 
-    /**
-     * Internal class to hold file data
-     */
     private static class FileData {
         byte[] content;
         long fileSize;
@@ -314,11 +269,6 @@ public class FileManager {
         }
     }
 
-    /**
-     * Retrieves a file from the database
-     * @param fileName Filename to retrieve
-     * @return FileData object containing file content and metadata, or null if not found
-     */
     private FileData getFileFromDatabase(String fileName) throws SQLException {
         return withConnection(conn -> {
             try (PreparedStatement pstmt = conn.prepareStatement(
@@ -339,10 +289,6 @@ public class FileManager {
         }, null);
     }
 
-    /**
-     * Lists all files in the database
-     * @return String representation of the file list
-     */
     public String listFiles() {
         return withConnection(conn -> {
             StringBuilder sb = new StringBuilder();
@@ -374,27 +320,16 @@ public class FileManager {
         }, "Error listing files. Please try again later.");
     }
 
-    /**
-     * Sanitizes a filename to prevent SQL injection and other issues
-     * @param filename The filename to sanitize
-     * @return A sanitized filename
-     */
     private String sanitizeFileName(String filename) {
         // Replace any path-like characters with underscores
         return filename.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
 
-    /**
-     * Calculates SHA-256 checksum of data
-     */
     private byte[] calculateChecksum(byte[] data) throws NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         return digest.digest(data);
     }
 
-    /**
-     * Calculates SHA-256 checksum of a file
-     */
     public byte[] calculateChecksum(File file) throws IOException, NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (BufferedInputStream fis = new BufferedInputStream(new FileInputStream(file), BUFFER_SIZE)) {
@@ -407,13 +342,6 @@ public class FileManager {
         return digest.digest();
     }
 
-    /**
-     * Verifies file content against expected checksum
-     * Utility method that can be used by other classes
-     * @param data The file content
-     * @param expectedChecksum The expected checksum
-     * @return True if checksum matches, false otherwise
-     */
     public boolean verifyChecksum(byte[] data, byte[] expectedChecksum) throws NoSuchAlgorithmException {
         byte[] actualChecksum = calculateChecksum(data);
         return MessageDigest.isEqual(expectedChecksum, actualChecksum);

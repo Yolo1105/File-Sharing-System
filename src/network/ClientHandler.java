@@ -1,6 +1,6 @@
 package network;
 
-import utils.FileValidationUtils;
+import service.FileValidationUtils;
 import utils.ResourceUtils;
 import logs.Logger;
 import logs.DBLogger;
@@ -70,10 +70,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    /**
-     * Creates a new client handler for a socket connection
-     * @param socket The connected client socket
-     */
     public ClientHandler(Socket socket) {
         this.socket = socket;
     }
@@ -111,9 +107,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    /**
-     * Creates and initializes the IO streams
-     */
     private void createStreams() throws IOException {
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -121,11 +114,6 @@ public class ClientHandler implements Runnable {
         dataOutputStream = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream(), BUFFER_SIZE));
     }
 
-    /**
-     * Handles the client identification process
-     * @param identificationMessage The message sent by the client for identification
-     * @return true if identification was successful, false otherwise
-     */
     private boolean handleClientIdentification(String identificationMessage) throws IOException {
         if (identificationMessage != null && identificationMessage.startsWith(CLIENT_ID_PREFIX)) {
             String[] parts = identificationMessage.split("\\s+", 2);
@@ -152,9 +140,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    /**
-     * Main loop to process client commands
-     */
     private void processCommands() throws IOException {
         String line;
         while (running && (line = reader.readLine()) != null) {
@@ -203,9 +188,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    /**
-     * Handles the UPLOAD command
-     */
     private void handleUpload(StringTokenizer tokenizer) throws IOException {
         if (!tokenizer.hasMoreTokens()) {
             writer.write(String.format(ERR_MISSING_FILENAME, "UPLOAD") + "\n");
@@ -266,9 +248,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    /**
-     * Handles the DOWNLOAD command
-     */
     private void handleDownload(StringTokenizer tokenizer) throws IOException {
         if (!tokenizer.hasMoreTokens()) {
             writer.write(String.format(ERR_MISSING_FILENAME, "DOWNLOAD") + "\n");
@@ -325,9 +304,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    /**
-     * Handles the LIST command
-     */
     private void handleList() throws IOException {
         String fileList = fileManager.listFiles();
 
@@ -342,9 +318,6 @@ public class ClientHandler implements Runnable {
         writer.flush();
     }
 
-    /**
-     * Handles the LOGS command
-     */
     private void handleLogs(StringTokenizer tokenizer) throws IOException {
         // Default number of logs to show
         int logCount = 10;
@@ -369,9 +342,6 @@ public class ClientHandler implements Runnable {
         writer.flush();
     }
 
-    /**
-     * Extracts the base client name without suffixes
-     */
     private String getBaseClientName() {
         if (clientName.contains("_")) {
             return clientName.substring(0, clientName.indexOf("_"));
@@ -379,9 +349,6 @@ public class ClientHandler implements Runnable {
         return clientName;
     }
 
-    /**
-     * Cleans up resources when the handler is done
-     */
     private void cleanup() {
         closeResources();
 
@@ -391,9 +358,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    /**
-     * Closes all resources safely
-     */
     private void closeResources() {
         ResourceUtils.safeClose(reader, "reader", logger);
         ResourceUtils.safeClose(writer, "writer", logger);

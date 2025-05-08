@@ -24,17 +24,11 @@ public class DBLogger {
     private static final String ERR_LOGS_FAILED = "Failed to retrieve logs";
     private static final String ERR_RESET_FAILED = "Failed to reset database";
 
-    /**
-     * Database operation functional interface for reducing duplication
-     */
     @FunctionalInterface
     private interface DatabaseOperation {
         void execute(Connection connection) throws SQLException;
     }
 
-    /**
-     * Initializes the database and ensures the schema is correct
-     */
     private static synchronized void initialize() {
         if (initialized || initializing) return;
 
@@ -64,9 +58,6 @@ public class DBLogger {
         }
     }
 
-    /**
-     * Helper method to standardize connection handling
-     */
     private static void withConnection(DatabaseOperation operation) throws SQLException {
         ConnectionManager pool = ConnectionManager.getInstance();
         Connection conn = null;
@@ -79,12 +70,6 @@ public class DBLogger {
         }
     }
 
-    /**
-     * Logs a file operation to the database
-     * @param client Client name
-     * @param action Action (UPLOAD, DOWNLOAD, etc.)
-     * @param filename Filename
-     */
     public static void log(String client, String action, String filename) {
         // Initialize if needed
         if (!initialized) {
@@ -130,11 +115,6 @@ public class DBLogger {
         }
     }
 
-    /**
-     * Gets recent logs from the database
-     * @param limit Maximum number of logs to retrieve
-     * @return String representation of the logs
-     */
     public static String getRecentLogs(int limit) {
         // Initialize if needed
         if (!initialized) {
@@ -213,10 +193,6 @@ public class DBLogger {
         return result.toString();
     }
 
-    /**
-     * Resets the database by dropping and recreating the logs table
-     * @deprecated This method is not currently used but kept for potential future maintenance
-     */
     @Deprecated
     public static void resetDatabase() {
         logger.log(Logger.Level.WARNING, "DBLogger", "Resetting logs database table");

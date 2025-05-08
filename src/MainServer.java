@@ -159,9 +159,6 @@ public class MainServer {
         }
     }
 
-    /**
-     * Shuts down the server gracefully
-     */
     private static void shutdown() {
         System.out.println("[INFO] " + INFO_SHUTDOWN);
         if (logger != null) {
@@ -217,11 +214,6 @@ public class MainServer {
         }
     }
 
-    /**
-     * Gets the current active connection count
-     * @return Number of active connections
-     * @deprecated This method is for monitoring purposes but is not currently used
-     */
     @Deprecated
     public static int getActiveConnections() {
         return activeConnections.get();

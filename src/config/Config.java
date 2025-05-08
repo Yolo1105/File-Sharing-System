@@ -97,9 +97,6 @@ public class Config {
         System.out.println("[CONFIG] Default configuration set");
     }
 
-    /**
-     * Optimize property values for better performance
-     */
     private static void optimizeProperties() {
         // Ensure buffer sizes are power of 2 and not too small
         int bufferSize = getIntProperty("buffer.size", DEFAULT_BUFFER_SIZE);
@@ -121,9 +118,6 @@ public class Config {
         }
     }
 
-    /**
-     * Gets an integer property with default value
-     */
     public static int getIntProperty(String key, int defaultValue) {
         // Check cache first
         if (propertyCache.containsKey(key)) {
@@ -148,9 +142,6 @@ public class Config {
         }
     }
 
-    /**
-     * Gets a long property with default value
-     */
     public static long getLongProperty(String key, long defaultValue) {
         // Check cache first
         if (propertyCache.containsKey(key)) {
@@ -175,9 +166,6 @@ public class Config {
         }
     }
 
-    /**
-     * Gets a boolean property with default value
-     */
     public static boolean getBooleanProperty(String key, boolean defaultValue) {
         // Check cache first
         if (propertyCache.containsKey(key)) {
@@ -197,51 +185,30 @@ public class Config {
         return result;
     }
 
-    /**
-     * Gets the server port from configuration
-     */
     public static int getServerPort() {
         return getIntProperty("server.port", DEFAULT_SERVER_PORT);
     }
 
-    /**
-     * Gets the maximum number of threads for the server
-     */
     public static int getMaxThreads() {
         return getIntProperty("server.max_threads", DEFAULT_MAX_THREADS);
     }
 
-    /**
-     * Gets the buffer size for I/O operations
-     */
     public static int getBufferSize() {
         return getIntProperty("buffer.size", DEFAULT_BUFFER_SIZE);
     }
 
-    /**
-     * Gets the socket timeout in milliseconds
-     */
     public static int getSocketTimeout() {
         return getIntProperty("socket.timeout", DEFAULT_SOCKET_TIMEOUT);
     }
 
-    /**
-     * Gets the upload/download timeout (typically longer than regular timeout)
-     */
     public static int getFileTransferTimeout() {
         return getSocketTimeout() * 2; // Double the regular timeout for file transfers
     }
 
-    /**
-     * Gets the core pool size for thread pool
-     */
     public static int getCorePoolSize() {
         return getIntProperty("server.core_pool_size", DEFAULT_CORE_POOL_SIZE);
     }
 
-    /**
-     * Gets the database URL
-     */
     public static String getDbUrl() {
         // Check cache first
         if (propertyCache.containsKey("db.url")) {
@@ -253,37 +220,22 @@ public class Config {
         return url;
     }
 
-    /**
-     * Gets the maximum number of database connections
-     */
     public static int getDbMaxConnections() {
         return getIntProperty("db.max_connections", DEFAULT_DB_MAX_CONNECTIONS);
     }
 
-    /**
-     * Gets the database connection timeout in seconds
-     */
     public static int getDbConnectionTimeout() {
         return getIntProperty("db.connection_timeout", DEFAULT_DB_CONNECTION_TIMEOUT);
     }
 
-    /**
-     * Gets the maximum allowed file size
-     */
     public static long getMaxFileSize() {
         return getLongProperty("file.max_size", DEFAULT_MAX_FILE_SIZE);
     }
 
-    /**
-     * Gets the downloads directory
-     */
     public static String getDownloadsDir() {
         return getProperty("downloads.dir", DEFAULT_DOWNLOADS_DIR);
     }
 
-    /**
-     * Gets a string property with default value
-     */
     public static String getProperty(String key, String defaultValue) {
         // Check cache first
         if (propertyCache.containsKey(key)) {
@@ -298,24 +250,14 @@ public class Config {
         return value;
     }
 
-    /**
-     * Gets the server host address
-     */
     public static String getServerHost() {
         return getProperty("server.host", "localhost");
     }
 
-    /**
-     * Checks if debug mode is enabled
-     */
     public static boolean isDebugMode() {
         return getBooleanProperty("debug.mode", false);
     }
 
-    /**
-     * Utility method to check if a client connection is a utility connection
-     * (for upload, download or verification operations)
-     */
     public static boolean isUtilityConnection(String clientName) {
         return clientName != null &&
                 (clientName.contains("_upload") ||
@@ -323,9 +265,6 @@ public class Config {
                         clientName.contains("_verify"));
     }
 
-    /**
-     * Creates a config.properties file with optimized default values if it doesn't exist
-     */
     public static void createDefaultConfigFile() {
         File configFile = new File(CONFIG_FILE);
         if (!configFile.exists()) {

@@ -1,22 +1,10 @@
 package utils;
 
 import java.io.*;
-import java.sql.*;
-import java.net.Socket;
 import java.util.function.Consumer;
-import logs.Logger; // Add import
+import logs.Logger;
 
-/**
- * Enhanced utility class for resource management operations
- * Provides standardized methods for safely handling resources
- */
 public class ResourceUtils {
-    /**
-     * Safely closes a resource and logs any errors
-     * @param resource The resource to close
-     * @param resourceName Name of the resource for logging
-     * @param logger Logger instance
-     */
     public static void safeClose(AutoCloseable resource, String resourceName, Logger logger) {
         if (resource != null) {
             try {
@@ -31,10 +19,6 @@ public class ResourceUtils {
         }
     }
 
-    /**
-     * Safely closes a resource without logging
-     * @param resource The resource to close
-     */
     public static void safeClose(AutoCloseable resource) {
         if (resource != null) {
             try {
@@ -46,19 +30,6 @@ public class ResourceUtils {
         }
     }
 
-    /**
-     * Uses a resource and ensures it is closed afterward
-     * Similar to try-with-resources but as a method
-     *
-     * @param <T> The type of resource
-     * @param <R> The return type
-     * @param resourceSupplier A function that creates the resource
-     * @param action A function that uses the resource and returns a result
-     * @param logger Logger instance for error reporting
-     * @param resourceName Name of the resource for error reporting
-     * @return The result of the action
-     * @throws Exception If an error occurs during resource creation or use
-     */
     public static <T extends AutoCloseable, R> R withResource(
             ResourceSupplier<T> resourceSupplier,
             ResourceAction<T, R> action,
@@ -80,16 +51,6 @@ public class ResourceUtils {
         }
     }
 
-    /**
-     * Uses a resource without a return value and ensures it is closed afterward
-     *
-     * @param <T> The type of resource
-     * @param resourceSupplier A function that creates the resource
-     * @param action A consumer that uses the resource
-     * @param logger Logger instance for error reporting
-     * @param resourceName Name of the resource for error reporting
-     * @throws Exception If an error occurs during resource creation or use
-     */
     public static <T extends AutoCloseable> void withResource(
             ResourceSupplier<T> resourceSupplier,
             Consumer<T> action,
@@ -111,11 +72,6 @@ public class ResourceUtils {
         }
     }
 
-    /**
-     * Safely closes multiple resources
-     * @param logger Logger instance for error reporting
-     * @param resources Variable number of resources to close
-     */
     public static void safeCloseAll(Logger logger, AutoCloseable... resources) {
         if (resources != null) {
             for (int i = resources.length - 1; i >= 0; i--) {
@@ -124,12 +80,6 @@ public class ResourceUtils {
         }
     }
 
-    /**
-     * Safely delete a file
-     * @param file The file to delete
-     * @param logger Logger instance
-     * @return true if the file was deleted successfully, false otherwise
-     */
     public static boolean safeDelete(File file, Logger logger) {
         if (file != null && file.exists()) {
             try {
@@ -150,12 +100,6 @@ public class ResourceUtils {
         return false;
     }
 
-    /**
-     * Safely creates directories for a file path
-     * @param file The file whose parent directories should be created
-     * @param logger Logger instance
-     * @return true if directories were created successfully or already exist, false otherwise
-     */
     public static boolean safeCreateDirectories(File file, Logger logger) {
         if (file != null) {
             File parentDir = file.getParentFile();
@@ -180,20 +124,11 @@ public class ResourceUtils {
         return false;
     }
 
-    /**
-     * Functional interface for creating a resource
-     * @param <T> The type of resource
-     */
     @FunctionalInterface
     public interface ResourceSupplier<T extends AutoCloseable> {
         T get() throws Exception;
     }
 
-    /**
-     * Functional interface for using a resource and returning a result
-     * @param <T> The type of resource
-     * @param <R> The return type
-     */
     @FunctionalInterface
     public interface ResourceAction<T extends AutoCloseable, R> {
         R perform(T resource) throws Exception;

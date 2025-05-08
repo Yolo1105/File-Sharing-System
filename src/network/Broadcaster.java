@@ -37,21 +37,10 @@ public class Broadcaster {
         return instance;
     }
 
-    /**
-     * Checks if the client is a utility connection (e.g., _upload, _download)
-     * Helper method to consolidate repeated checks
-     * @param clientName The client name to check
-     * @return true if the client is a utility connection, false otherwise
-     */
     private boolean isUtilityConnection(String clientName) {
         return Config.isUtilityConnection(clientName);
     }
 
-    /**
-     * Registers a new client and notifies other clients
-     * @param clientName The name of the client to register
-     * @param writer The writer stream for the client
-     */
     public void register(String clientName, BufferedWriter writer) {
         // Don't register clients with special suffixes (_upload, _download, _verify)
         if (isUtilityConnection(clientName)) {
@@ -68,10 +57,6 @@ public class Broadcaster {
         broadcast(String.format(JOIN_MESSAGE_FORMAT, clientName), clientName);
     }
 
-    /**
-     * Unregisters a client when they disconnect
-     * @param clientName The name of the client to unregister
-     */
     public void unregister(String clientName) {
         // Don't notify about utility connections
         if (isUtilityConnection(clientName)) {
@@ -87,19 +72,10 @@ public class Broadcaster {
         }
     }
 
-    /**
-     * Broadcasts a message to all clients
-     * @param message The message to broadcast
-     */
     public void broadcast(String message) {
         broadcast(message, null); // Broadcast to all clients
     }
 
-    /**
-     * Broadcasts a message to all clients except the specified client (if not null)
-     * @param message The message to broadcast
-     * @param excludeClient Client to exclude from broadcast (or null to broadcast to all)
-     */
     public void broadcast(String message, String excludeClient) {
         int successCount = 0;
         int failureCount = 0;
@@ -140,11 +116,6 @@ public class Broadcaster {
                         failureInfo));
     }
 
-    /**
-     * Broadcasts a file upload notification
-     * @param uploaderName The name of the client who uploaded the file
-     * @param filename The name of the uploaded file
-     */
     public void broadcastFileUpload(String uploaderName, String filename) {
         // Skip notifications for utility connections
         if (isUtilityConnection(uploaderName)) {
@@ -154,11 +125,6 @@ public class Broadcaster {
         broadcast(String.format(UPLOAD_MESSAGE_FORMAT, uploaderName, filename), null);
     }
 
-    /**
-     * Broadcasts a file download notification
-     * @param downloaderName The name of the client who downloaded the file
-     * @param filename The name of the downloaded file
-     */
     public void broadcastFileDownload(String downloaderName, String filename) {
         // Skip notifications for utility connections
         if (isUtilityConnection(downloaderName)) {
@@ -168,10 +134,6 @@ public class Broadcaster {
         broadcast(String.format(DOWNLOAD_MESSAGE_FORMAT, downloaderName, filename), null);
     }
 
-    /**
-     * Gets the number of connected clients
-     * @return Number of connected clients (excluding utility connections)
-     */
     public int getConnectedClientsCount() {
         int count = 0;
         for (String key : clientWriters.keySet()) {
@@ -182,12 +144,6 @@ public class Broadcaster {
         return count;
     }
 
-    /**
-     * Sends a direct message to a specific client
-     * @param clientName The name of the client to message
-     * @param message The message to send
-     * @return true if message was sent, false otherwise
-     */
     public boolean sendDirectMessage(String clientName, String message) {
         BufferedWriter writer = clientWriters.get(clientName);
         if (writer != null) {
@@ -204,11 +160,6 @@ public class Broadcaster {
         return false;
     }
 
-    /**
-     * Checks if a client is currently connected
-     * @param clientName The name of the client to check
-     * @return true if client is connected, false otherwise
-     */
     public boolean isClientConnected(String clientName) {
         return clientWriters.containsKey(clientName);
     }

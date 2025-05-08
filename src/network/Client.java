@@ -1,6 +1,6 @@
 package network;
 
-import utils.FileValidationUtils;
+import service.FileValidationUtils;
 import logs.Logger;
 
 import java.io.*;
@@ -125,9 +125,6 @@ public class Client {
         }
     }
 
-    /**
-     * Starts a thread to listen for server notifications
-     */
     private static Thread startNotificationListener(BufferedReader reader) {
         Thread notificationThread = new Thread(() -> {
             try {
@@ -158,9 +155,6 @@ public class Client {
         return notificationThread;
     }
 
-    /**
-     * Process user commands in a loop
-     */
     private static void processUserCommands(Scanner scanner, BufferedWriter writer,
                                             BufferedReader reader, String serverHost, int serverPort,
                                             String clientName, Socket socket) throws IOException {
@@ -200,9 +194,6 @@ public class Client {
         }
     }
 
-    /**
-     * Handle UPLOAD command
-     */
     private static void handleUploadCommand(String command, String serverHost,
                                             int serverPort, String clientName) {
 
@@ -223,9 +214,6 @@ public class Client {
         }
     }
 
-    /**
-     * Handle DOWNLOAD command
-     */
     private static void handleDownloadCommand(String command, String serverHost,
                                               int serverPort, String clientName) {
 
@@ -246,9 +234,6 @@ public class Client {
         }
     }
 
-    /**
-     * Handle LIST command
-     */
     private static void handleListCommand(BufferedWriter writer, Socket socket,
                                           BufferedReader reader) throws IOException {
 
@@ -260,9 +245,6 @@ public class Client {
         readServerResponse(socket, reader);
     }
 
-    /**
-     * Handle LOGS command
-     */
     private static void handleLogsCommand(String command, BufferedWriter writer,
                                           Socket socket, BufferedReader reader) throws IOException {
 
@@ -285,9 +267,6 @@ public class Client {
         readServerResponse(socket, reader);
     }
 
-    /**
-     * Upload file to server
-     */
     private static void handleUpload(String filePath, String serverHost, int serverPort, String clientName) {
         System.out.println(String.format(INFO_PROCESSING, "UPLOAD", filePath));
 
@@ -411,9 +390,6 @@ public class Client {
         }
     }
 
-    /**
-     * Download file from server
-     */
     private static void handleDownload(String filename, String serverHost, int serverPort, String clientName) {
         System.out.println(String.format(INFO_PROCESSING, "DOWNLOAD", filename));
 
@@ -569,9 +545,6 @@ public class Client {
         }
     }
 
-    /**
-     * Read server response with timeout handling
-     */
     private static void readServerResponse(Socket socket, BufferedReader reader) throws IOException {
         // Set a longer timeout for command responses
         int originalTimeout = socket.getSoTimeout();
@@ -616,9 +589,6 @@ public class Client {
         }
     }
 
-    /**
-     * Calculate SHA-256 checksum of a file
-     */
     private static byte[] calculateChecksum(File file) throws IOException, NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (BufferedInputStream fis = new BufferedInputStream(new FileInputStream(file), BUFFER_SIZE)) {

@@ -54,10 +54,6 @@ public class ConnectionManager {
         return instance;
     }
 
-    /**
-     * Initializes the database schema - tables, indices, etc.
-     * This should be called once at application startup
-     */
     public static synchronized void initializeDatabaseSchema() {
         ConnectionManager pool = getInstance();
 
@@ -107,9 +103,6 @@ public class ConnectionManager {
         }
     }
 
-    /**
-     * Creates the files table if it doesn't exist
-     */
     private static void createFilesTable(Connection conn) throws SQLException {
         boolean tableExists = tableExists(conn, "files");
 
@@ -132,9 +125,6 @@ public class ConnectionManager {
         }
     }
 
-    /**
-     * Creates the logs table if it doesn't exist
-     */
     private static void createLogsTable(Connection conn) throws SQLException {
         boolean tableExists = tableExists(conn, "logs");
 
@@ -156,9 +146,6 @@ public class ConnectionManager {
         }
     }
 
-    /**
-     * Checks if a table exists in the database
-     */
     private static boolean tableExists(Connection conn, String tableName) throws SQLException {
         try (ResultSet rs = conn.getMetaData().getTables(null, null, tableName, null)) {
             return rs.next();

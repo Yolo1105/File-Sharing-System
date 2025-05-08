@@ -45,9 +45,6 @@ public class Logger {
     private static final int FLUSH_THRESHOLD = 10;
     private int entriesSinceFlush = 0;
 
-    /**
-     * Private constructor for singleton pattern
-     */
     private Logger() {
         try {
             // Create the log file directory if it doesn't exist
@@ -79,16 +76,10 @@ public class Logger {
         }
     }
 
-    /**
-     * Get the singleton instance
-     */
     public static Logger getInstance() {
         return instance;
     }
 
-    /**
-     * Starts the logging thread to consume from the queue
-     */
     private void startLoggingThread() {
         loggingThread = new Thread(() -> {
             try {
@@ -141,41 +132,26 @@ public class Logger {
         loggingThread.start();
     }
 
-    /**
-     * Sets the log level threshold. Only logs at this level or higher are recorded.
-     */
     public void setLogLevel(Level level) {
         this.logLevelThreshold = level;
         log(Level.INFO, "Logger", "Log level set to: " + level);
     }
 
-    /**
-     * Enables or disables debug mode
-     */
     public void setDebugMode(boolean debug) {
         this.debugMode = debug;
         log(Level.INFO, "Logger", "Debug mode set to: " + debug);
     }
 
-    /**
-     * Enables or disables console output
-     */
     public void setConsoleOutput(boolean enabled) {
         this.consoleOutput = enabled;
         log(Level.INFO, "Logger", "Console output set to: " + enabled);
     }
 
-    /**
-     * Formats a log entry with timestamp and level
-     */
     private String formatLogEntry(Level level, String source, String message) {
         String timestamp = LocalDateTime.now().format(timeFormatter);
         return String.format("[%s] [%s] [%s] %s", timestamp, level, source, message);
     }
 
-    /**
-     * Logs a message if its level is at or above the current threshold
-     */
     public void log(Level level, String source, String message) {
         // Skip logging if not initialized or if level is below threshold
         if (!initialized.get() || !level.isAtLeastAsImportantAs(logLevelThreshold)) {
@@ -206,9 +182,6 @@ public class Logger {
         logQueue.add(logEntry);
     }
 
-    /**
-     * Logs an exception with stack trace
-     */
     public void log(Level level, String source, String message, Throwable throwable) {
         log(level, source, message + ": " + throwable.getMessage());
 
@@ -229,24 +202,15 @@ public class Logger {
         }
     }
 
-    /**
-     * Convenience method for static logging without requiring the instance directly
-     */
     public static void logStatic(Level level, String source, String message) {
         getInstance().log(level, source, message);
     }
 
-    /**
-     * Convenience method for static exception logging
-     */
+
     public static void logStatic(Level level, String source, String message, Throwable throwable) {
         getInstance().log(level, source, message, throwable);
     }
 
-    /**
-     * Utility method to log message to both file and console regardless of current settings
-     * @deprecated This method is not currently used but kept for potential future needs
-     */
     @Deprecated
     public static void console(Level level, String source, String message) {
         String formattedMsg = getInstance().formatLogEntry(level, source, message);
@@ -258,9 +222,6 @@ public class Logger {
         getInstance().logQueue.add(formattedMsg);
     }
 
-    /**
-     * Shutdown the logging system
-     */
     public void shutdown() {
         if (!initialized.get()) {
             return;
