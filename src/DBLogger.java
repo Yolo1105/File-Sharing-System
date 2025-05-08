@@ -81,6 +81,11 @@ public class DBLogger {
             client = "Unknown";
         }
 
+        // Clean up client name by removing suffixes like _upload or _download
+        if (client.contains("_")) {
+            client = client.substring(0, client.indexOf("_"));
+        }
+
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection conn = null;
@@ -145,11 +150,37 @@ public class DBLogger {
 
                     while (rs.next()) {
                         hasLogs = true;
-                        result.append("[")
-                                .append(rs.getString("timestamp")).append("] ")
-                                .append(rs.getString("client")).append(" ")
-                                .append(rs.getString("action")).append(": ")
-                                .append(rs.getString("filename")).append("\n");
+
+                        // Get the timestamp from database
+                        String timestamp = rs.getString("timestamp");
+
+                        // Parse timestamp and reformat to HH:mm
+                        try {
+                            LocalDateTime dateTime = LocalDateTime.parse(timestamp,
+                                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+                            // Format just the hour:minute
+                            String timeOnly = dateTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+
+                            // Get the client name without any suffix
+                            String client = rs.getString("client");
+                            if (client.contains("_")) {
+                                client = client.substring(0, client.indexOf("_"));
+                            }
+
+                            // Format the log entry as requested
+                            result.append("[").append(timeOnly).append("] ")
+                                    .append(client).append(" ")
+                                    .append(rs.getString("action")).append(": ")
+                                    .append(rs.getString("filename")).append("\n");
+                        } catch (Exception e) {
+                            // If any error in formatting, fall back to original format
+                            result.append("[")
+                                    .append(timestamp).append("] ")
+                                    .append(rs.getString("client")).append(" ")
+                                    .append(rs.getString("action")).append(": ")
+                                    .append(rs.getString("filename")).append("\n");
+                        }
                     }
 
                     if (!hasLogs) {

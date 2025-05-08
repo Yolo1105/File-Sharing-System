@@ -48,7 +48,7 @@ public class ClientHandler implements Runnable {
             dataInputStream = new DataInputStream(new BufferedInputStream(socket.getInputStream(), BUFFER_SIZE));
             dataOutputStream = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream(), BUFFER_SIZE));
 
-            writer.write("Welcome to the File Server. Please identify using CLIENT_ID <name>\n");
+            writer.write("Welcome to the File Server. Please identify using CLIENT_ID <n>\n");
             writer.flush();
 
             String initial = reader.readLine();
@@ -73,7 +73,7 @@ public class ClientHandler implements Runnable {
                 return;
             }
 
-            writer.write("You can now use: UPLOAD <filename>, DOWNLOAD <filename>, LIST\n");
+            writer.write("You can now use: UPLOAD <filename>, DOWNLOAD <filename>, LIST, LOGS [count]\n");
             writer.flush();
 
             String line;
@@ -214,8 +214,32 @@ public class ClientHandler implements Runnable {
                             writer.flush();
                             break;
 
+                        case "LOGS":
+                            // Default number of logs to show
+                            int logCount = 10;
+
+                            // Check if user specified a count
+                            if (tokenizer.hasMoreTokens()) {
+                                try {
+                                    logCount = Integer.parseInt(tokenizer.nextToken());
+                                    // Enforce reasonable limits
+                                    if (logCount < 1) logCount = 1;
+                                    if (logCount > 100) logCount = 100;
+                                } catch (NumberFormatException e) {
+                                    // Ignore invalid numbers, use default
+                                }
+                            }
+
+                            // Get logs from database
+                            String logs = DBLogger.getRecentLogs(logCount);
+
+                            // Send to client with end marker
+                            writer.write(logs + "*END*\n");
+                            writer.flush();
+                            break;
+
                         default:
-                            writer.write("Unknown command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST\n");
+                            writer.write("Unknown command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST, LOGS [count]\n");
                             writer.flush();
                             break;
                     }

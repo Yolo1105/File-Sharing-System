@@ -128,8 +128,26 @@ public class Client {
 
                     // Read LIST response with improved handling
                     readServerResponse(socket, reader);
+                } else if (cmd.equals("LOGS")) {
+                    // Get log count if specified
+                    int logCount = 10; // Default
+                    String[] parts = command.split("\\s+", 2);
+                    if (parts.length > 1) {
+                        try {
+                            logCount = Integer.parseInt(parts[1].trim());
+                        } catch (NumberFormatException e) {
+                            // Ignore invalid numbers
+                        }
+                    }
+
+                    writer.write("LOGS " + logCount + "\n");
+                    writer.flush();
+                    System.out.println("[INFO] Requesting " + logCount + " recent logs from server...");
+
+                    // Read LOGS response
+                    readServerResponse(socket, reader);
                 } else {
-                    System.out.println("[ERROR] Invalid command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST");
+                    System.out.println("[ERROR] Invalid command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST, LOGS [count]");
                 }
             }
 
