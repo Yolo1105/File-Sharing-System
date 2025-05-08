@@ -4572,3 +4572,488 @@ java.io.IOException: Stream closed
 [2025-05-07 18:15:53.146] [INFO] [ClientHandler] Closed data output stream
 [2025-05-07 18:15:53.146] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
 [2025-05-07 18:15:53.146] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-07 20:42:05.731] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:42:05.734] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:42:29.346] [INFO] [Logger] Logging system initialized
+[2025-05-07 20:42:29.367] [INFO] [MainServer] Starting server on port 12345 with 5 core threads, 10 max threads
+[2025-05-07 20:42:29.368] [INFO] [MainServer] Server started successfully
+[2025-05-07 20:42:44.997] [INFO] [Logger] Logging system initialized
+[2025-05-07 20:42:45.003] [INFO] [Client] Starting client...
+[2025-05-07 20:42:45.020] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60166 (Active connections: 1)
+[2025-05-07 20:42:45.022] [INFO] [Client] Connected to server at localhost:12345
+[2025-05-07 20:42:45.024] [INFO] [ClientHandler] New client connected: /127.0.0.1:60166
+[2025-05-07 20:42:45.025] [INFO] [ClientHandler] Set socket timeout to 30 seconds
+[2025-05-07 20:42:45.025] [INFO] [ClientHandler] All streams initialized
+[2025-05-07 20:42:45.025] [INFO] [ClientHandler] Sent welcome message
+[2025-05-07 20:42:47.565] [INFO] [ClientHandler] Received initial message: CLIENT_ID Mohan
+[2025-05-07 20:42:47.566] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-07 20:42:47.569] [INFO] [Broadcaster] Broadcast message: [SERVER] Mohan has joined the server. (excluding Mohan)
+[2025-05-07 20:42:47.569] [INFO] [ClientHandler] Client registered with name: Mohan
+[2025-05-07 20:42:47.569] [INFO] [ClientHandler] Client identified as: Mohan
+[2025-05-07 20:42:47.569] [INFO] [ClientHandler] Sent available commands
+[2025-05-07 20:42:50.790] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-07 20:42:50.791] [INFO] [ClientHandler] Processing command: LIST
+[2025-05-07 20:42:50.791] [INFO] [ClientHandler] Processing LIST command
+[2025-05-07 20:42:50.791] [INFO] [ClientHandler] Retrieved file list with 1 files
+[2025-05-07 20:42:50.792] [INFO] [ClientHandler] Sent file list to client
+[2025-05-07 20:42:50.792] [INFO] [ClientHandler] Mohan requested file list
+[2025-05-07 20:42:57.165] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60168 (Active connections: 2)
+[2025-05-07 20:42:57.166] [INFO] [ClientHandler] New client connected: /127.0.0.1:60168
+[2025-05-07 20:42:57.166] [INFO] [ClientHandler] Set socket timeout to 30 seconds
+[2025-05-07 20:42:57.166] [INFO] [ClientHandler] All streams initialized
+[2025-05-07 20:42:57.166] [INFO] [ClientHandler] Sent welcome message
+[2025-05-07 20:42:57.167] [INFO] [ClientHandler] Received initial message: CLIENT_ID Mohan_download
+[2025-05-07 20:42:57.167] [INFO] [Broadcaster] Registered client: Mohan_download
+[2025-05-07 20:42:57.167] [INFO] [Broadcaster] Broadcast message: [SERVER] Mohan_download has joined the server. (excluding Mohan_download)
+[2025-05-07 20:42:57.167] [INFO] [ClientHandler] Client registered with name: Mohan_download
+[2025-05-07 20:42:57.167] [INFO] [ClientHandler] Client identified as: Mohan_download
+[2025-05-07 20:42:57.167] [INFO] [ClientHandler] Sent available commands
+[2025-05-07 20:42:57.168] [INFO] [ClientHandler] Mohan_download issued command: DOWNLOAD test.txt
+[2025-05-07 20:42:57.168] [INFO] [ClientHandler] Processing command: DOWNLOAD
+[2025-05-07 20:42:57.168] [INFO] [ClientHandler] Download requested for file: test.txt
+[2025-05-07 20:42:57.168] [INFO] [ClientHandler] Looking for file at: D:\Java\FileSharingSystem\server_files\test.txt
+[2025-05-07 20:42:57.168] [INFO] [ClientHandler] Increased socket timeout to 120 seconds for file transfer
+[2025-05-07 20:42:57.168] [INFO] [ClientHandler] Calling fileManager.sendFile()
+[2025-05-07 20:42:57.169] [INFO] [FileManager] Sending file: test.txt
+[2025-05-07 20:42:57.183] [INFO] [FileManager] Sending file size: 18 bytes
+[2025-05-07 20:42:57.183] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-07 20:42:57.183] [INFO] [FileManager] File transfer complete: test.txt
+[2025-05-07 20:42:57.183] [INFO] [ClientHandler] File sent successfully: test.txt
+[2025-05-07 20:42:57.184] [INFO] [ClientHandler] Reset socket timeout to 30 seconds
+[2025-05-07 20:42:57.331] [INFO] [ClientHandler] Cleaning up resources for client: Mohan_download
+[2025-05-07 20:42:57.332] [INFO] [ClientHandler] Closed reader
+[2025-05-07 20:42:57.332] [INFO] [ClientHandler] Closed writer
+[2025-05-07 20:42:57.332] [INFO] [ClientHandler] Closed data input stream
+[2025-05-07 20:42:57.332] [INFO] [ClientHandler] Closed data output stream
+[2025-05-07 20:42:57.332] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
+[2025-05-07 20:42:57.332] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:43:13.577] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-07 20:43:13.577] [INFO] [ClientHandler] Processing command: LIST
+[2025-05-07 20:43:13.577] [INFO] [ClientHandler] Processing LIST command
+[2025-05-07 20:43:13.578] [INFO] [ClientHandler] Retrieved file list with 1 files
+[2025-05-07 20:43:13.578] [INFO] [ClientHandler] Sent file list to client
+[2025-05-07 20:43:13.578] [INFO] [ClientHandler] Mohan requested file list
+[2025-05-07 20:43:17.768] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-07 20:43:17.768] [INFO] [ClientHandler] Processing command: LIST
+[2025-05-07 20:43:17.768] [INFO] [ClientHandler] Processing LIST command
+[2025-05-07 20:43:17.769] [INFO] [ClientHandler] Retrieved file list with 1 files
+[2025-05-07 20:43:17.769] [INFO] [ClientHandler] Sent file list to client
+[2025-05-07 20:43:17.769] [INFO] [ClientHandler] Mohan requested file list
+[2025-05-07 20:43:25.542] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60169 (Active connections: 2)
+[2025-05-07 20:43:25.542] [INFO] [ClientHandler] New client connected: /127.0.0.1:60169
+[2025-05-07 20:43:25.542] [INFO] [ClientHandler] Set socket timeout to 30 seconds
+[2025-05-07 20:43:25.543] [INFO] [ClientHandler] All streams initialized
+[2025-05-07 20:43:25.543] [INFO] [ClientHandler] Sent welcome message
+[2025-05-07 20:43:25.543] [INFO] [ClientHandler] Received initial message: CLIENT_ID Mohan_download
+[2025-05-07 20:43:25.543] [INFO] [Broadcaster] Registered client: Mohan_download
+[2025-05-07 20:43:25.543] [INFO] [Broadcaster] Broadcast message: [SERVER] Mohan_download has joined the server. (excluding Mohan_download)
+[2025-05-07 20:43:25.543] [INFO] [ClientHandler] Client registered with name: Mohan_download
+[2025-05-07 20:43:25.543] [INFO] [ClientHandler] Client identified as: Mohan_download
+[2025-05-07 20:43:25.543] [INFO] [ClientHandler] Sent available commands
+[2025-05-07 20:43:25.543] [INFO] [ClientHandler] Mohan_download issued command: DOWNLOAD test.txt
+[2025-05-07 20:43:25.543] [INFO] [ClientHandler] Processing command: DOWNLOAD
+[2025-05-07 20:43:25.544] [INFO] [ClientHandler] Download requested for file: test.txt
+[2025-05-07 20:43:25.544] [INFO] [ClientHandler] Looking for file at: D:\Java\FileSharingSystem\server_files\test.txt
+[2025-05-07 20:43:25.544] [INFO] [ClientHandler] Increased socket timeout to 120 seconds for file transfer
+[2025-05-07 20:43:25.544] [INFO] [ClientHandler] Calling fileManager.sendFile()
+[2025-05-07 20:43:25.544] [INFO] [FileManager] Sending file: test.txt
+[2025-05-07 20:43:25.544] [INFO] [FileManager] Sending file size: 18 bytes
+[2025-05-07 20:43:25.544] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-07 20:43:25.545] [INFO] [FileManager] File transfer complete: test.txt
+[2025-05-07 20:43:25.545] [INFO] [ClientHandler] File sent successfully: test.txt
+[2025-05-07 20:43:25.545] [INFO] [ClientHandler] Reset socket timeout to 30 seconds
+[2025-05-07 20:43:25.545] [INFO] [ClientHandler] Cleaning up resources for client: Mohan_download
+[2025-05-07 20:43:25.545] [INFO] [ClientHandler] Closed reader
+[2025-05-07 20:43:25.545] [INFO] [ClientHandler] Closed writer
+[2025-05-07 20:43:25.546] [INFO] [ClientHandler] Closed data input stream
+[2025-05-07 20:43:25.546] [INFO] [ClientHandler] Closed data output stream
+[2025-05-07 20:43:25.546] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
+[2025-05-07 20:43:25.546] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:43:47.771] [ERROR] [ClientHandler] Connection lost with Mohan, Error: Read timed out: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at ClientHandler.run(ClientHandler.java:76)
+	at MainServer$1.run(MainServer.java:74)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+[2025-05-07 20:43:47.772] [INFO] [ClientHandler] Cleaning up resources for client: Mohan
+[2025-05-07 20:43:47.773] [INFO] [ClientHandler] Closed reader
+[2025-05-07 20:43:47.773] [INFO] [ClientHandler] Closed writer
+[2025-05-07 20:43:47.773] [INFO] [ClientHandler] Closed data input stream
+[2025-05-07 20:43:47.773] [INFO] [ClientHandler] Closed data output stream
+[2025-05-07 20:43:47.773] [INFO] [ClientHandler] All resources cleaned up for client: Mohan
+[2025-05-07 20:43:47.773] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-07 20:44:17.314] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:44:17.318] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:45:04.871] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 20:45:04.881] [INFO] [MainServer] Starting server on port 12345 with 5 core threads, 10 max threads
+[2025-05-07 20:45:04.882] [INFO] [MainServer] Server started successfully
+[2025-05-07 20:45:10.215] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60297 (Active connections: 1)
+[2025-05-07 20:45:10.219] [INFO] [ClientHandler] New client connected: /127.0.0.1:60297
+[2025-05-07 20:45:10.198] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 20:45:10.202] [INFO] [Client] Starting client...
+[2025-05-07 20:45:10.217] [INFO] [Client] Connected to server at localhost:12345
+[2025-05-07 20:45:13.412] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-07 20:45:13.415] [INFO] [Broadcaster] Broadcast message: [SERVER] Mohan has joined the server. (excluding Mohan)
+[2025-05-07 20:45:19.428] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-07 20:45:22.191] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-07 20:45:34.436] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60299 (Active connections: 2)
+[2025-05-07 20:45:34.437] [INFO] [ClientHandler] New client connected: /127.0.0.1:60299
+[2025-05-07 20:45:34.437] [INFO] [Broadcaster] Registered client: Mohan_download
+[2025-05-07 20:45:34.438] [INFO] [Broadcaster] Broadcast message: [SERVER] Mohan_download has joined the server. (excluding Mohan_download)
+[2025-05-07 20:45:34.438] [INFO] [ClientHandler] Mohan_download issued command: DOWNLOAD test.txt
+[2025-05-07 20:45:34.439] [INFO] [FileManager] Sending file: test.txt
+[2025-05-07 20:45:34.451] [INFO] [FileManager] Sending file size: 18 bytes
+[2025-05-07 20:45:34.452] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-07 20:45:34.452] [INFO] [FileManager] File transfer complete: test.txt
+[2025-05-07 20:45:34.600] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
+[2025-05-07 20:45:34.601] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:45:52.364] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60305 (Active connections: 2)
+[2025-05-07 20:45:52.364] [INFO] [ClientHandler] New client connected: /127.0.0.1:60305
+[2025-05-07 20:45:52.351] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 20:45:52.356] [INFO] [Client] Starting client...
+[2025-05-07 20:45:52.369] [INFO] [Client] Connected to server at localhost:12345
+[2025-05-07 20:45:55.281] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-07 20:45:55.281] [ERROR] [Broadcaster] Failed to message Mohan_download: Stream closed
+java.io.IOException: Stream closed
+	at java.base/java.io.BufferedWriter.ensureOpen(BufferedWriter.java:107)
+	at java.base/java.io.BufferedWriter.write(BufferedWriter.java:224)
+	at java.base/java.io.Writer.write(Writer.java:249)
+	at Broadcaster.broadcast(Broadcaster.java:45)
+	at Broadcaster.register(Broadcaster.java:24)
+	at ClientHandler.run(ClientHandler.java:51)
+	at MainServer$1.run(MainServer.java:74)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-07 20:45:55.281] [INFO] [Broadcaster] Broadcast message: [SERVER] MOMO has joined the server. (excluding MOMO)
+[2025-05-07 20:46:07.418] [INFO] [ClientHandler] MOMO issued command: LIST
+[2025-05-07 20:46:10.460] [INFO] [ClientHandler] Mohan issued command: EXIT
+[2025-05-07 20:46:10.461] [ERROR] [ClientHandler] Error processing command: EXIT: An established connection was aborted by the software in your host machine
+java.net.SocketException: An established connection was aborted by the software in your host machine
+	at java.base/sun.nio.ch.NioSocketImpl.implWrite(NioSocketImpl.java:425)
+	at java.base/sun.nio.ch.NioSocketImpl.write(NioSocketImpl.java:445)
+	at java.base/sun.nio.ch.NioSocketImpl$2.write(NioSocketImpl.java:831)
+	at java.base/java.net.Socket$SocketOutputStream.write(Socket.java:1035)
+	at java.base/sun.nio.cs.StreamEncoder.writeBytes(StreamEncoder.java:234)
+	at java.base/sun.nio.cs.StreamEncoder.implFlushBuffer(StreamEncoder.java:313)
+	at java.base/sun.nio.cs.StreamEncoder.implFlush(StreamEncoder.java:318)
+	at java.base/sun.nio.cs.StreamEncoder.flush(StreamEncoder.java:160)
+	at java.base/java.io.OutputStreamWriter.flush(OutputStreamWriter.java:248)
+	at java.base/java.io.BufferedWriter.flush(BufferedWriter.java:257)
+	at ClientHandler.run(ClientHandler.java:209)
+	at MainServer$1.run(MainServer.java:74)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-07 20:46:10.461] [ERROR] [ClientHandler] Failed to send error message, connection may be lost: An established connection was aborted by the software in your host machine
+java.net.SocketException: An established connection was aborted by the software in your host machine
+	at java.base/sun.nio.ch.NioSocketImpl.implWrite(NioSocketImpl.java:425)
+	at java.base/sun.nio.ch.NioSocketImpl.write(NioSocketImpl.java:445)
+	at java.base/sun.nio.ch.NioSocketImpl$2.write(NioSocketImpl.java:831)
+	at java.base/java.net.Socket$SocketOutputStream.write(Socket.java:1035)
+	at java.base/sun.nio.cs.StreamEncoder.writeBytes(StreamEncoder.java:234)
+	at java.base/sun.nio.cs.StreamEncoder.implWrite(StreamEncoder.java:304)
+	at java.base/sun.nio.cs.StreamEncoder.implWrite(StreamEncoder.java:282)
+	at java.base/sun.nio.cs.StreamEncoder.write(StreamEncoder.java:132)
+	at java.base/java.io.OutputStreamWriter.write(OutputStreamWriter.java:205)
+	at java.base/java.io.BufferedWriter.flushBuffer(BufferedWriter.java:120)
+	at java.base/java.io.BufferedWriter.flush(BufferedWriter.java:256)
+	at ClientHandler.run(ClientHandler.java:221)
+	at MainServer$1.run(MainServer.java:74)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-07 20:46:10.462] [ERROR] [ClientHandler] Error closing resources: Socket closed
+java.net.SocketException: Socket closed
+	at java.base/sun.nio.ch.NioSocketImpl.ensureOpenAndConnected(NioSocketImpl.java:165)
+	at java.base/sun.nio.ch.NioSocketImpl.beginWrite(NioSocketImpl.java:371)
+	at java.base/sun.nio.ch.NioSocketImpl.implWrite(NioSocketImpl.java:416)
+	at java.base/sun.nio.ch.NioSocketImpl.write(NioSocketImpl.java:445)
+	at java.base/sun.nio.ch.NioSocketImpl$2.write(NioSocketImpl.java:831)
+	at java.base/java.net.Socket$SocketOutputStream.write(Socket.java:1035)
+	at java.base/sun.nio.cs.StreamEncoder.writeBytes(StreamEncoder.java:234)
+	at java.base/sun.nio.cs.StreamEncoder.implWrite(StreamEncoder.java:304)
+	at java.base/sun.nio.cs.StreamEncoder.implWrite(StreamEncoder.java:282)
+	at java.base/sun.nio.cs.StreamEncoder.write(StreamEncoder.java:132)
+	at java.base/java.io.OutputStreamWriter.write(OutputStreamWriter.java:205)
+	at java.base/java.io.BufferedWriter.flushBuffer(BufferedWriter.java:120)
+	at java.base/java.io.BufferedWriter.close(BufferedWriter.java:268)
+	at ClientHandler.closeResources(ClientHandler.java:243)
+	at ClientHandler.run(ClientHandler.java:236)
+	at MainServer$1.run(MainServer.java:74)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-07 20:46:10.462] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:46:48.697] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60338 (Active connections: 2)
+[2025-05-07 20:46:48.697] [INFO] [ClientHandler] New client connected: /127.0.0.1:60338
+[2025-05-07 20:46:48.685] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 20:46:48.689] [INFO] [Client] Starting client...
+[2025-05-07 20:46:48.702] [INFO] [Client] Connected to server at localhost:12345
+[2025-05-07 20:46:52.811] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:46:53.318] [INFO] [ClientHandler] Connection closed by client: Unknown
+[2025-05-07 20:46:53.318] [INFO] [ClientHandler] All resources cleaned up for client: Unknown
+[2025-05-07 20:46:53.320] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:47:50.509] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:47:50.512] [INFO] [MainServer] Server shutting down...
+[2025-05-07 20:47:50.512] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:47:50.512] [INFO] [MainServer] Server shutting down...
+[2025-05-07 20:47:50.512] [INFO] [MainServer] Server shutdown complete
+[2025-05-07 20:47:50.515] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:52:01.668] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 20:52:01.680] [INFO] [MainServer] Starting server on port 12345 with 5 core threads, 10 max threads
+[2025-05-07 20:52:01.681] [INFO] [MainServer] Server started successfully
+[2025-05-07 20:52:10.292] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60541 (Active connections: 1)
+[2025-05-07 20:52:10.296] [INFO] [ClientHandler] New client connected: /127.0.0.1:60541
+[2025-05-07 20:52:10.277] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 20:52:10.281] [INFO] [Client] Starting client...
+[2025-05-07 20:52:10.294] [INFO] [Client] Connected to server at localhost:12345
+[2025-05-07 20:52:12.906] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-07 20:52:12.913] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-07 20:52:15.187] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-07 20:52:19.705] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60543 (Active connections: 2)
+[2025-05-07 20:52:19.705] [INFO] [ClientHandler] New client connected: /127.0.0.1:60543
+[2025-05-07 20:52:19.706] [INFO] [Broadcaster] Registered client: Mohan_download
+[2025-05-07 20:52:19.706] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_download has joined the server. (excluding Mohan_download) to 1 clients
+[2025-05-07 20:52:19.707] [INFO] [ClientHandler] Mohan_download issued command: DOWNLOAD test.txt
+[2025-05-07 20:52:19.707] [INFO] [FileManager] Sending file: test.txt
+[2025-05-07 20:52:19.721] [INFO] [FileManager] Sending file size: 18 bytes
+[2025-05-07 20:52:19.721] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-07 20:52:19.722] [INFO] [FileManager] File transfer complete: test.txt
+[2025-05-07 20:52:19.878] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
+[2025-05-07 20:52:19.878] [INFO] [Broadcaster] Unregistered client: Mohan_download
+[2025-05-07 20:52:19.878] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_download has left the server. to 1 clients
+[2025-05-07 20:52:19.878] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:54:01.064] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:54:01.066] [INFO] [MainServer] Server shutting down...
+[2025-05-07 20:54:01.066] [INFO] [Logger] Logging system shutting down
+[2025-05-07 20:54:05.679] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 20:54:05.690] [INFO] [MainServer] Starting server on port 12345 with 5 core threads, 10 max threads
+[2025-05-07 20:54:05.691] [INFO] [MainServer] Server started successfully
+[2025-05-07 20:54:08.799] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60649 (Active connections: 1)
+[2025-05-07 20:54:08.803] [INFO] [ClientHandler] New client connected: /127.0.0.1:60649
+[2025-05-07 20:54:08.783] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 20:54:08.787] [INFO] [Client] Starting client...
+[2025-05-07 20:54:08.801] [INFO] [Client] Connected to server at localhost:12345
+[2025-05-07 20:54:11.776] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-07 20:54:11.782] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-07 20:54:23.465] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60679 (Active connections: 2)
+[2025-05-07 20:54:23.465] [INFO] [ClientHandler] New client connected: /127.0.0.1:60679
+[2025-05-07 20:54:23.465] [INFO] [Broadcaster] Registered client: Mohan_upload
+[2025-05-07 20:54:23.465] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_upload has joined the server. (excluding Mohan_upload) to 1 clients
+[2025-05-07 20:54:23.468] [INFO] [ClientHandler] Mohan_upload issued command: UPLOAD test.txt
+[2025-05-07 20:54:23.468] [INFO] [FileManager] Starting file reception for: test.txt
+[2025-05-07 20:54:23.469] [INFO] [FileManager] Receiving file: test.txt
+[2025-05-07 20:54:23.538] [INFO] [FileManager] File size reported: 18 bytes
+[2025-05-07 20:54:23.538] [INFO] [FileManager] Checksum length: 32
+[2025-05-07 20:54:23.538] [INFO] [FileManager] Checksum received
+[2025-05-07 20:54:23.540] [INFO] [FileManager] Starting file data transfer for: test.txt
+[2025-05-07 20:54:23.540] [INFO] [FileManager] File data transfer complete
+[2025-05-07 20:54:23.552] [INFO] [FileManager] Checksum verification successful
+[2025-05-07 20:54:23.553] [INFO] [FileManager] File received and saved to: D:\Java\FileSharingSystem\server_files\test.txt
+[2025-05-07 20:54:23.701] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_upload
+[2025-05-07 20:54:23.701] [INFO] [Broadcaster] Unregistered client: Mohan_upload
+[2025-05-07 20:54:23.701] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_upload has left the server. to 1 clients
+[2025-05-07 20:54:23.702] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:54:23.702] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60680 (Active connections: 2)
+[2025-05-07 20:54:23.702] [INFO] [ClientHandler] New client connected: /127.0.0.1:60680
+[2025-05-07 20:54:23.703] [INFO] [Broadcaster] Registered client: Mohan_verify
+[2025-05-07 20:54:23.703] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_verify has joined the server. (excluding Mohan_verify) to 1 clients
+[2025-05-07 20:54:23.703] [INFO] [ClientHandler] Mohan_verify issued command: LIST
+[2025-05-07 20:54:23.704] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_verify
+[2025-05-07 20:54:23.704] [INFO] [Broadcaster] Unregistered client: Mohan_verify
+[2025-05-07 20:54:23.704] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_verify has left the server. to 1 clients
+[2025-05-07 20:54:23.704] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:54:53.170] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60730 (Active connections: 2)
+[2025-05-07 20:54:53.171] [INFO] [ClientHandler] New client connected: /127.0.0.1:60730
+[2025-05-07 20:54:53.171] [INFO] [Broadcaster] Registered client: Mohan_upload
+[2025-05-07 20:54:53.171] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_upload has joined the server. (excluding Mohan_upload) to 1 clients
+[2025-05-07 20:54:53.171] [INFO] [ClientHandler] Mohan_upload issued command: UPLOAD test.txt
+[2025-05-07 20:54:53.171] [INFO] [FileManager] Starting file reception for: test.txt
+[2025-05-07 20:54:53.171] [INFO] [FileManager] Receiving file: test.txt
+[2025-05-07 20:54:53.222] [INFO] [FileManager] File size reported: 25 bytes
+[2025-05-07 20:54:53.222] [INFO] [FileManager] Checksum length: 32
+[2025-05-07 20:54:53.222] [INFO] [FileManager] Checksum received
+[2025-05-07 20:54:53.224] [INFO] [FileManager] Starting file data transfer for: test.txt
+[2025-05-07 20:54:53.224] [INFO] [FileManager] File data transfer complete
+[2025-05-07 20:54:53.225] [INFO] [FileManager] Checksum verification successful
+[2025-05-07 20:54:53.226] [INFO] [FileManager] File received and saved to: D:\Java\FileSharingSystem\server_files\test.txt
+[2025-05-07 20:54:53.226] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_upload
+[2025-05-07 20:54:53.226] [INFO] [Broadcaster] Unregistered client: Mohan_upload
+[2025-05-07 20:54:53.226] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_upload has left the server. to 1 clients
+[2025-05-07 20:54:53.226] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:54:53.227] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60731 (Active connections: 2)
+[2025-05-07 20:54:53.227] [INFO] [ClientHandler] New client connected: /127.0.0.1:60731
+[2025-05-07 20:54:53.227] [INFO] [Broadcaster] Registered client: Mohan_verify
+[2025-05-07 20:54:53.228] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_verify has joined the server. (excluding Mohan_verify) to 1 clients
+[2025-05-07 20:54:53.228] [INFO] [ClientHandler] Mohan_verify issued command: LIST
+[2025-05-07 20:54:53.228] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_verify
+[2025-05-07 20:54:53.228] [INFO] [Broadcaster] Unregistered client: Mohan_verify
+[2025-05-07 20:54:53.228] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_verify has left the server. to 1 clients
+[2025-05-07 20:54:53.228] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:54:59.196] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60734 (Active connections: 2)
+[2025-05-07 20:54:59.197] [INFO] [ClientHandler] New client connected: /127.0.0.1:60734
+[2025-05-07 20:54:59.197] [INFO] [Broadcaster] Registered client: Mohan_download
+[2025-05-07 20:54:59.197] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_download has joined the server. (excluding Mohan_download) to 1 clients
+[2025-05-07 20:54:59.197] [INFO] [ClientHandler] Mohan_download issued command: DOWNLOAD test.txt
+[2025-05-07 20:54:59.199] [INFO] [FileManager] Sending file: test.txt
+[2025-05-07 20:54:59.199] [INFO] [FileManager] Sending file size: 25 bytes
+[2025-05-07 20:54:59.199] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-07 20:54:59.200] [INFO] [FileManager] File transfer complete: test.txt
+[2025-05-07 20:54:59.200] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
+[2025-05-07 20:54:59.200] [INFO] [Broadcaster] Unregistered client: Mohan_download
+[2025-05-07 20:54:59.200] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan_download has left the server. to 1 clients
+[2025-05-07 20:54:59.200] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 20:55:43.965] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-07 20:57:43.972] [ERROR] [ClientHandler] Connection lost with Mohan: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at ClientHandler.run(ClientHandler.java:67)
+	at MainServer$1.run(MainServer.java:74)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-07 20:57:43.973] [INFO] [ClientHandler] All resources cleaned up for client: Mohan
+[2025-05-07 20:57:43.973] [INFO] [Broadcaster] Unregistered client: Mohan
+[2025-05-07 20:57:43.973] [INFO] [Broadcaster] Broadcast message: [SERVER NOTIFICATION] Mohan has left the server. to 0 clients
+[2025-05-07 20:57:43.973] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-07 21:05:04.037] [INFO] [Logger] Logging system shutting down
+[2025-05-07 21:05:04.037] [INFO] [MainServer] Server shutting down...
+[2025-05-07 21:05:04.038] [INFO] [MainServer] Server shutdown complete
+[2025-05-07 21:05:04.038] [INFO] [MainServer] Server shutting down...
+[2025-05-07 21:05:04.038] [INFO] [MainServer] Server shutdown complete
+[2025-05-07 21:05:04.040] [INFO] [Logger] Logging system shutting down
+[2025-05-07 21:05:13.662] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 21:05:13.673] [INFO] [MainServer] Starting server on port 12345 with 5 core threads, 10 max threads
+[2025-05-07 21:05:13.675] [INFO] [MainServer] Server started successfully
+[2025-05-07 21:05:16.314] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60956 (Active connections: 1)
+[2025-05-07 21:05:16.319] [INFO] [ClientHandler] New client connected: /127.0.0.1:60956
+[2025-05-07 21:05:16.299] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 21:05:16.303] [INFO] [Client] Starting client...
+[2025-05-07 21:05:16.316] [INFO] [Client] Connected to server at localhost:12345
+[2025-05-07 21:05:20.944] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-07 21:05:20.951] [INFO] [Broadcaster] Broadcast message: @SERVER_NOTIFICATION:Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-07 21:05:23.161] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-07 21:05:50.483] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60992 (Active connections: 2)
+[2025-05-07 21:05:50.484] [INFO] [ClientHandler] New client connected: /127.0.0.1:60992
+[2025-05-07 21:05:50.484] [INFO] [ClientHandler] Mohan_upload issued command: UPLOAD test.txt
+[2025-05-07 21:05:50.484] [INFO] [FileManager] Starting file reception for: test.txt
+[2025-05-07 21:05:50.484] [INFO] [FileManager] Receiving file: test.txt
+[2025-05-07 21:05:50.556] [INFO] [FileManager] File size reported: 17 bytes
+[2025-05-07 21:05:50.556] [INFO] [FileManager] Checksum length: 32
+[2025-05-07 21:05:50.556] [INFO] [FileManager] Checksum received
+[2025-05-07 21:05:50.558] [INFO] [FileManager] Starting file data transfer for: test.txt
+[2025-05-07 21:05:50.558] [INFO] [FileManager] File data transfer complete
+[2025-05-07 21:05:50.577] [INFO] [FileManager] Checksum verification successful
+[2025-05-07 21:05:50.578] [INFO] [FileManager] File received and saved to: D:\Java\FileSharingSystem\server_files\test.txt
+[2025-05-07 21:05:50.727] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_upload
+[2025-05-07 21:05:50.727] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 21:06:04.528] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-07 21:06:09.199] [INFO] [MainServer] New connection accepted from: /127.0.0.1:60993 (Active connections: 2)
+[2025-05-07 21:06:09.199] [INFO] [ClientHandler] New client connected: /127.0.0.1:60993
+[2025-05-07 21:06:09.200] [INFO] [ClientHandler] Mohan_download issued command: DOWNLOAD test.txt
+[2025-05-07 21:06:09.201] [INFO] [FileManager] Sending file: test.txt
+[2025-05-07 21:06:09.201] [INFO] [FileManager] Sending file size: 17 bytes
+[2025-05-07 21:06:09.201] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-07 21:06:09.202] [INFO] [FileManager] File transfer complete: test.txt
+[2025-05-07 21:06:09.202] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
+[2025-05-07 21:06:09.202] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 21:06:44.773] [INFO] [MainServer] New connection accepted from: /127.0.0.1:61017 (Active connections: 2)
+[2025-05-07 21:06:44.773] [INFO] [ClientHandler] New client connected: /127.0.0.1:61017
+[2025-05-07 21:06:44.761] [INFO] [Logger] Logging system initialized. Debug mode: false
+[2025-05-07 21:06:44.764] [INFO] [Client] Starting client...
+[2025-05-07 21:06:44.779] [INFO] [Client] Connected to server at localhost:12345
+[2025-05-07 21:06:47.123] [INFO] [Broadcaster] Registered client: HEHE
+[2025-05-07 21:06:47.123] [INFO] [Broadcaster] Broadcast message: @SERVER_NOTIFICATION:HEHE has joined the server. (excluding HEHE) to 1 clients
+[2025-05-07 21:06:48.963] [INFO] [ClientHandler] HEHE issued command: LIST
+[2025-05-07 21:07:03.509] [INFO] [MainServer] New connection accepted from: /127.0.0.1:61048 (Active connections: 3)
+[2025-05-07 21:07:03.510] [INFO] [ClientHandler] New client connected: /127.0.0.1:61048
+[2025-05-07 21:07:03.510] [INFO] [ClientHandler] HEHE_upload issued command: UPLOAD test.txt
+[2025-05-07 21:07:03.510] [INFO] [FileManager] Starting file reception for: test.txt
+[2025-05-07 21:07:03.510] [INFO] [FileManager] Receiving file: test.txt
+[2025-05-07 21:07:03.580] [INFO] [FileManager] File size reported: 17 bytes
+[2025-05-07 21:07:03.580] [INFO] [FileManager] Checksum length: 32
+[2025-05-07 21:07:03.580] [INFO] [FileManager] Checksum received
+[2025-05-07 21:07:03.580] [INFO] [FileManager] Starting file data transfer for: test.txt
+[2025-05-07 21:07:03.581] [INFO] [FileManager] File data transfer complete
+[2025-05-07 21:07:03.582] [INFO] [FileManager] Checksum verification successful
+[2025-05-07 21:07:03.582] [INFO] [FileManager] File received and saved to: D:\Java\FileSharingSystem\server_files\test.txt
+[2025-05-07 21:07:03.583] [INFO] [ClientHandler] All resources cleaned up for client: HEHE_upload
+[2025-05-07 21:07:03.583] [INFO] [MainServer] Connection closed. Active connections: 2
+[2025-05-07 21:08:04.544] [ERROR] [ClientHandler] Connection lost with Mohan: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at ClientHandler.run(ClientHandler.java:71)
+	at MainServer$1.run(MainServer.java:74)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-07 21:08:04.545] [INFO] [ClientHandler] All resources cleaned up for client: Mohan
+[2025-05-07 21:08:04.545] [INFO] [Broadcaster] Unregistered client: Mohan
+[2025-05-07 21:08:04.545] [INFO] [Broadcaster] Broadcast message: @SERVER_NOTIFICATION:Mohan has left the server. to 1 clients
+[2025-05-07 21:08:04.545] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-07 21:08:48.978] [ERROR] [ClientHandler] Connection lost with HEHE: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at ClientHandler.run(ClientHandler.java:71)
+	at MainServer$1.run(MainServer.java:74)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-07 21:08:48.978] [INFO] [ClientHandler] All resources cleaned up for client: HEHE
+[2025-05-07 21:08:48.978] [INFO] [Broadcaster] Unregistered client: HEHE
+[2025-05-07 21:08:48.978] [INFO] [Broadcaster] Broadcast message: @SERVER_NOTIFICATION:HEHE has left the server. to 0 clients
+[2025-05-07 21:08:48.979] [INFO] [MainServer] Connection closed. Active connections: 0

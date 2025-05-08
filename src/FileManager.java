@@ -9,6 +9,7 @@ public class FileManager {
     public static final String SHARED_DIR = Config.getFilesDirectory();
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private static final Logger logger = Logger.getInstance();
+    private static final int BUFFER_SIZE = 32768; // Increased from 8192 to 32KB for better performance
 
     public FileManager() {
         File dir = new File(SHARED_DIR);
@@ -72,10 +73,11 @@ public class FileManager {
             File tempFile = new File(SHARED_DIR + tempFileName);
             File outputFile = new File(SHARED_DIR + sanitizedFileName.trim());
 
-            try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-                byte[] buffer = new byte[8192];
+            try (BufferedOutputStream fos = new BufferedOutputStream(new FileOutputStream(tempFile), BUFFER_SIZE)) {
+                byte[] buffer = new byte[BUFFER_SIZE]; // Increased buffer size
                 long remaining = fileSize;
                 int count;
+                long lastLoggedProgress = 0;
 
                 logger.log(Logger.Level.INFO, "FileManager", "Starting file data transfer for: " + fileName);
 
@@ -84,8 +86,9 @@ public class FileManager {
                     fos.write(buffer, 0, count);
                     remaining -= count;
 
-                    // Log progress for large files
-                    if (fileSize > 100000 && remaining % (fileSize / 10) < 8192) {
+                    // Log progress less frequently for better performance
+                    if (fileSize > 1000000 && (fileSize - remaining) - lastLoggedProgress > fileSize / 5) {
+                        lastLoggedProgress = fileSize - remaining;
                         int progress = (int)((fileSize - remaining) * 100 / fileSize);
                         logger.log(Logger.Level.INFO, "FileManager", "Receive progress: " + progress + "%");
                     }
@@ -149,7 +152,9 @@ public class FileManager {
             // Sanitize the filename to prevent directory traversal attacks
             String sanitizedFileName = sanitizeFileName(fileName);
             File inputFile = new File(SHARED_DIR + sanitizedFileName.trim());
-            DataOutputStream dataOut = new DataOutputStream(outputStream);
+
+            // Use buffered streams for better performance
+            DataOutputStream dataOut = new DataOutputStream(new BufferedOutputStream(outputStream, BUFFER_SIZE));
 
             if (!inputFile.exists() || !inputFile.isFile()) {
                 logger.log(Logger.Level.WARNING, "FileManager", "File not found: " + inputFile.getAbsolutePath());
@@ -166,7 +171,6 @@ public class FileManager {
             // Send file size
             dataOut.writeLong(fileSize);
             logger.log(Logger.Level.INFO, "FileManager", "Sending file size: " + fileSize + " bytes");
-            dataOut.flush();
 
             // Send checksum
             dataOut.writeInt(checksum.length);
@@ -174,17 +178,20 @@ public class FileManager {
             logger.log(Logger.Level.INFO, "FileManager", "Sending checksum of length: " + checksum.length + " bytes");
             dataOut.flush();
 
-            // Send file contents
-            try (FileInputStream fis = new FileInputStream(inputFile)) {
-                byte[] buffer = new byte[8192];
+            // Send file contents with buffered streams
+            try (BufferedInputStream fis = new BufferedInputStream(new FileInputStream(inputFile), BUFFER_SIZE)) {
+                byte[] buffer = new byte[BUFFER_SIZE]; // Increased buffer size
                 int count;
                 long totalSent = 0;
+                long lastLoggedProgress = 0;
 
                 while ((count = fis.read(buffer)) > 0) {
                     dataOut.write(buffer, 0, count);
                     totalSent += count;
 
-                    if (fileSize > 100000 && totalSent % (fileSize / 10) < 8192) {
+                    // Log progress less frequently for better performance
+                    if (fileSize > 1000000 && totalSent - lastLoggedProgress > fileSize / 5) {
+                        lastLoggedProgress = totalSent;
                         int progress = (int)(totalSent * 100 / fileSize);
                         logger.log(Logger.Level.INFO, "FileManager", "Send progress: " + progress + "%");
                     }
@@ -244,8 +251,8 @@ public class FileManager {
 
     private byte[] calculateChecksum(File file) throws IOException, NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] buffer = new byte[8192];
+        try (BufferedInputStream fis = new BufferedInputStream(new FileInputStream(file), BUFFER_SIZE)) {
+            byte[] buffer = new byte[BUFFER_SIZE];
             int count;
             while ((count = fis.read(buffer)) > 0) {
                 digest.update(buffer, 0, count);
