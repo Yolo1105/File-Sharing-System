@@ -1,3 +1,8 @@
+package network;
+
+import utils.FileValidationUtils;
+import logs.Logger;
+
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
@@ -5,12 +10,10 @@ import java.net.SocketTimeoutException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Scanner;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.net.URLEncoder;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+
+import config.Config;
 
 public class Client {
     private static final Logger logger = Logger.getInstance();
@@ -19,6 +22,9 @@ public class Client {
     private static final int BUFFER_SIZE = Config.getBufferSize();
     private static final int SOCKET_TIMEOUT = Config.getSocketTimeout();
     private static final int FILE_TRANSFER_TIMEOUT = Config.getFileTransferTimeout();
+
+    // Maximum file size (10MB)
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     // Command constants from Config
     private static final String CMD_UPLOAD = Config.Protocol.CMD_UPLOAD;
@@ -35,7 +41,8 @@ public class Client {
     private static final String ERR_CONNECTION_ERROR = "Connection error: %s";
     private static final String ERR_MISSING_FILENAME = "Missing filename for %s command.";
     private static final String ERR_FILE_NOT_FOUND = "File not found: %s";
-    private static final String ERR_ONLY_TXT = "Only .txt files are allowed for upload.";
+    private static final String ERR_BLOCKED_FILE_TYPE = "This file type is not allowed for security reasons.";
+    private static final String ERR_FILE_TOO_LARGE = "File exceeds maximum size limit of 10MB.";
     private static final String ERR_ENCODE_FILENAME = "Failed to encode filename: %s";
     private static final String ERR_UPLOAD_FAILED = "Upload failed: %s";
     private static final String ERR_DOWNLOAD_FAILED = "Download failed: %s";
@@ -63,7 +70,6 @@ public class Client {
     private static final String SUCCESS_UPLOADED = "File '%s' was successfully uploaded to the server database.";
 
     private static final String PROMPT = "> ";
-    private static final String CLIENT_FILES_DIR = "client_files/";
     private static final String DOWNLOADS_DIR = "downloads/";
 
     public static void main(String[] args) {
@@ -74,7 +80,7 @@ public class Client {
 
         try (Socket socket = new Socket(serverHost, serverPort)) {
             // Configure socket for better stability
-            SocketUtils.configureStandardSocket(socket);
+            SocketHandler.configureStandardSocket(socket);
 
             System.out.println(String.format(INFO_CONNECTED, serverHost, serverPort));
             logger.log(Logger.Level.INFO, "Client", String.format(INFO_CONNECTED, serverHost, serverPort));
@@ -153,7 +159,7 @@ public class Client {
     }
 
     /**
-     * Main loop to process user commands
+     * Process user commands in a loop
      */
     private static void processUserCommands(Scanner scanner, BufferedWriter writer,
                                             BufferedReader reader, String serverHost, int serverPort,
@@ -195,7 +201,7 @@ public class Client {
     }
 
     /**
-     * Handles the UPLOAD command
+     * Handle UPLOAD command
      */
     private static void handleUploadCommand(String command, String serverHost,
                                             int serverPort, String clientName) {
@@ -218,7 +224,7 @@ public class Client {
     }
 
     /**
-     * Handles the DOWNLOAD command
+     * Handle DOWNLOAD command
      */
     private static void handleDownloadCommand(String command, String serverHost,
                                               int serverPort, String clientName) {
@@ -241,7 +247,7 @@ public class Client {
     }
 
     /**
-     * Handles the LIST command
+     * Handle LIST command
      */
     private static void handleListCommand(BufferedWriter writer, Socket socket,
                                           BufferedReader reader) throws IOException {
@@ -255,7 +261,7 @@ public class Client {
     }
 
     /**
-     * Handles the LOGS command
+     * Handle LOGS command
      */
     private static void handleLogsCommand(String command, BufferedWriter writer,
                                           Socket socket, BufferedReader reader) throws IOException {
@@ -280,7 +286,7 @@ public class Client {
     }
 
     /**
-     * Handles file upload with improved performance
+     * Upload file to server
      */
     private static void handleUpload(String filePath, String serverHost, int serverPort, String clientName) {
         System.out.println(String.format(INFO_PROCESSING, "UPLOAD", filePath));
@@ -289,25 +295,28 @@ public class Client {
         File file = new File(filePath);
 
         if (!file.exists()) {
-            // If the file doesn't exist with the full path, try looking in client_files
-            file = new File(CLIENT_FILES_DIR + filePath);
-
-            if (!file.exists()) {
-                System.out.println(String.format(ERR_FILE_NOT_FOUND, filePath));
-                System.out.println("Please provide a valid file path or place the file in the " +
-                        CLIENT_FILES_DIR + " directory.");
-                return;
-            }
+            System.out.println(String.format(ERR_FILE_NOT_FOUND, filePath));
+            System.out.println("Please provide a valid file path.");
+            return;
         }
 
         // Get just the filename for the server (without path)
         String filename = file.getName();
 
-        // Check file extension
-        if (!filename.toLowerCase().endsWith(".txt")) {
-            System.out.println(ERR_ONLY_TXT);
+        // Check for blocked file types
+        if (FileValidationUtils.isBlockedFileType(filename)) {
+            System.out.println(ERR_BLOCKED_FILE_TYPE);
             return;
         }
+
+        // Check file size
+        long fileSize = file.length();
+        if (fileSize > MAX_FILE_SIZE) {
+            System.out.println(ERR_FILE_TOO_LARGE);
+            return;
+        }
+
+        System.out.println(String.format(INFO_PREPARING, filename, fileSize));
 
         // URL encode the filename to safely transmit it
         String encodedFilename;
@@ -318,13 +327,10 @@ public class Client {
             return;
         }
 
-        long fileSize = file.length();
-        System.out.println(String.format(INFO_PREPARING, filename, fileSize));
-
         // Create a new socket for the file transfer
         try (Socket uploadSocket = new Socket(serverHost, serverPort)) {
             // Configure upload socket with longer timeout for larger files
-            SocketUtils.configureFileTransferSocket(uploadSocket);
+            SocketHandler.configureFileTransferSocket(uploadSocket);
 
             // Create streams for the upload socket
             BufferedReader uploadReader = new BufferedReader(
@@ -406,7 +412,7 @@ public class Client {
     }
 
     /**
-     * Handles file download with improved performance
+     * Download file from server
      */
     private static void handleDownload(String filename, String serverHost, int serverPort, String clientName) {
         System.out.println(String.format(INFO_PROCESSING, "DOWNLOAD", filename));
@@ -423,7 +429,7 @@ public class Client {
         // Create a dedicated connection for downloading
         try (Socket downloadSocket = new Socket(serverHost, serverPort)) {
             // Configure download socket
-            SocketUtils.configureFileTransferSocket(downloadSocket);
+            SocketHandler.configureFileTransferSocket(downloadSocket);
 
             // Create streams with larger buffers
             BufferedReader downloadReader = new BufferedReader(
@@ -465,7 +471,7 @@ public class Client {
             }
 
             // Validate file size
-            if (fileSize > 10_000_000_000L) { // 10GB max as sanity check
+            if (fileSize > MAX_FILE_SIZE) {
                 System.out.println(String.format(ERR_INVALID_FILESIZE, fileSize));
                 return;
             }
@@ -495,7 +501,7 @@ public class Client {
             File outFile = new File(dir, filename);
 
             try (BufferedOutputStream fileOut = new BufferedOutputStream(new FileOutputStream(tempFile), BUFFER_SIZE)) {
-                byte[] buffer = new byte[BUFFER_SIZE]; // Increased buffer size
+                byte[] buffer = new byte[BUFFER_SIZE];
                 long remaining = fileSize;
                 int count;
                 int lastPercentageReported = 0;
@@ -564,12 +570,12 @@ public class Client {
     }
 
     /**
-     * Improved method to read server responses with better timeout handling
+     * Read server response with timeout handling
      */
     private static void readServerResponse(Socket socket, BufferedReader reader) throws IOException {
         // Set a longer timeout for command responses
         int originalTimeout = socket.getSoTimeout();
-        socket.setSoTimeout(30000); // 30 second timeout (increased from 15)
+        socket.setSoTimeout(30000); // 30 second timeout
 
         try {
             String line;
@@ -611,7 +617,7 @@ public class Client {
     }
 
     /**
-     * Calculates SHA-256 checksum of a file
+     * Calculate SHA-256 checksum of a file
      */
     private static byte[] calculateChecksum(File file) throws IOException, NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");

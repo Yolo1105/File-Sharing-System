@@ -1,6 +1,11 @@
+package logs; // Add package declaration
+
+import logs.Logger;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+
+import database.ConnectionManager;
 
 public class DBLogger {
     private static final Logger logger = Logger.getInstance();
@@ -36,7 +41,7 @@ public class DBLogger {
         initializing = true;
         logger.log(Logger.Level.INFO, "DBLogger", "Initializing database logger - tables should be already created");
 
-        // No need to create tables here anymore - ConnectionPool.initializeDatabaseSchema handles it
+        // No need to create tables here anymore - ConnectionManager.initializeDatabaseSchema handles it
         try {
             // Just verify the table exists as a sanity check
             withConnection(conn -> {
@@ -63,7 +68,7 @@ public class DBLogger {
      * Helper method to standardize connection handling
      */
     private static void withConnection(DatabaseOperation operation) throws SQLException {
-        ConnectionPool pool = ConnectionPool.getInstance();
+        ConnectionManager pool = ConnectionManager.getInstance();
         Connection conn = null;
 
         try {

@@ -1,3 +1,5 @@
+import logs.Logger;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -9,6 +11,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import network.ClientHandler;
+import config.Config;
+import database.ConnectionManager;
 
 public class MainServer {
     private static final Logger logger = Logger.getInstance();
@@ -48,12 +54,9 @@ public class MainServer {
                 logger.log(Logger.Level.INFO, "MainServer", "Initializing server...");
             }
 
-            // Create directories if they don't exist
-            createRequiredDirectories();
-
             // Initialize database schema through the connection pool - use try-catch to handle initialization errors
             try {
-                ConnectionPool.initializeDatabaseSchema();
+                ConnectionManager.initializeDatabaseSchema();
             } catch (Exception e) {
                 System.err.println("[FATAL] Failed to initialize database schema: " + e.getMessage());
                 e.printStackTrace();
@@ -153,32 +156,6 @@ public class MainServer {
             System.exit(1);
         } finally {
             shutdown();
-        }
-    }
-
-    /**
-     * Creates required directories for server operation
-     */
-    private static void createRequiredDirectories() {
-        // Create server files directory
-        java.io.File serverDir = new java.io.File(Config.getFilesDirectory());
-        if (!serverDir.exists()) {
-            boolean created = serverDir.mkdirs();
-            System.out.println("[INFO] Created server files directory: " + created);
-        }
-
-        // Create client files directory
-        java.io.File clientDir = new java.io.File("client_files");
-        if (!clientDir.exists()) {
-            boolean created = clientDir.mkdirs();
-            System.out.println("[INFO] Created client files directory: " + created);
-        }
-
-        // Create downloads directory
-        java.io.File downloadsDir = new java.io.File("downloads");
-        if (!downloadsDir.exists()) {
-            boolean created = downloadsDir.mkdirs();
-            System.out.println("[INFO] Created downloads directory: " + created);
         }
     }
 

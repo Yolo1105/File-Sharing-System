@@ -1,10 +1,13 @@
+package network; // Add package declaration
+
 import java.net.Socket;
 import java.net.SocketException;
+import config.Config; // Add import
 
 /**
  * Utility class for socket configuration operations
  */
-public class SocketUtils {
+public class SocketHandler {
     /**
      * Configures a socket with standard parameters
      * @param socket The socket to configure

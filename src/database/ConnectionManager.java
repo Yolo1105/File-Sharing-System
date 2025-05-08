@@ -1,3 +1,6 @@
+package database;
+
+import logs.Logger;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -8,8 +11,11 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-public class ConnectionPool {
-    private static final ConnectionPool instance = new ConnectionPool();
+import utils.ResourceUtils;
+import config.Config;
+
+public class ConnectionManager {
+    private static final ConnectionManager instance = new ConnectionManager();
     // Initialize logger as static to avoid NPE
     private static final Logger logger = Logger.getInstance();
     private final String dbUrl;
@@ -21,7 +27,7 @@ public class ConnectionPool {
     private boolean initialized = false;
     private boolean databaseSchemaInitialized = false;
 
-    private ConnectionPool() {
+    private ConnectionManager() {
         // Use System.out for initialization to avoid circular dependency with Logger
         System.out.println("[INIT] Initializing ConnectionPool with database URL: " + Config.getDbUrl());
 
@@ -44,7 +50,7 @@ public class ConnectionPool {
         }
     }
 
-    public static ConnectionPool getInstance() {
+    public static ConnectionManager getInstance() {
         return instance;
     }
 
@@ -53,7 +59,7 @@ public class ConnectionPool {
      * This should be called once at application startup
      */
     public static synchronized void initializeDatabaseSchema() {
-        ConnectionPool pool = getInstance();
+        ConnectionManager pool = getInstance();
 
         // Skip if already initialized
         if (pool.databaseSchemaInitialized) {

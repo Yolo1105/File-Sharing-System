@@ -1,7 +1,17 @@
+package network;
+
+import utils.FileValidationUtils;
+import utils.ResourceUtils;
+import logs.Logger;
+import logs.DBLogger;
+
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.StringTokenizer;
+
+import service.FileManager;
+import config.Config;
 
 public class ClientHandler implements Runnable {
     private final Socket socket;
@@ -26,6 +36,9 @@ public class ClientHandler implements Runnable {
     private static final int SOCKET_TIMEOUT = Config.getSocketTimeout();
     private static final int FILE_TRANSFER_TIMEOUT = Config.getFileTransferTimeout();
 
+    // Maximum file size (10MB)
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+
     // Command constants
     private static final String CMD_UPLOAD = Config.Protocol.CMD_UPLOAD;
     private static final String CMD_DOWNLOAD = Config.Protocol.CMD_DOWNLOAD;
@@ -36,7 +49,8 @@ public class ClientHandler implements Runnable {
 
     // Error messages
     private static final String ERR_MISSING_FILENAME = "Missing filename for %s";
-    private static final String ERR_ONLY_TXT = "ERROR: Only .txt files are allowed";
+    private static final String ERR_BLOCKED_FILE_TYPE = "ERROR: This file type is not allowed for security reasons";
+    private static final String ERR_FILE_TOO_LARGE = "ERROR: File exceeds maximum size limit of 10MB";
     private static final String ERR_UPLOAD_FAILED = "ERROR: Upload failed: %s";
     private static final String ERR_DOWNLOAD_FAILED = "ERROR: Failed to send file: %s";
     private static final String ERR_UNKNOWN_COMMAND = "Unknown command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST, LOGS [count]";
@@ -70,7 +84,7 @@ public class ClientHandler implements Runnable {
 
         try {
             // Configure socket for better stability
-            SocketUtils.configureStandardSocket(socket);
+            SocketHandler.configureStandardSocket(socket);
 
             // Create IO streams
             createStreams();
@@ -201,15 +215,16 @@ public class ClientHandler implements Runnable {
 
         String uploadFilename = tokenizer.nextToken();
 
-        if (!uploadFilename.toLowerCase().endsWith(".txt")) {
-            writer.write(ERR_ONLY_TXT + "\n");
+        // Check for blocked file types
+        if (FileValidationUtils.isBlockedFileType(uploadFilename)) {
+            writer.write(ERR_BLOCKED_FILE_TYPE + "\n");
             writer.flush();
             return;
         }
 
         try {
             // Increase timeout for file operations
-            SocketUtils.configureFileTransferSocket(socket);
+            SocketHandler.configureFileTransferSocket(socket);
 
             // Handle upload with clear protocol boundaries
             fileManager.receiveFile(uploadFilename, dataInputStream);
@@ -240,14 +255,14 @@ public class ClientHandler implements Runnable {
             }
 
             // Reset timeout to normal
-            SocketUtils.configureStandardSocket(socket);
+            SocketHandler.configureStandardSocket(socket);
         } catch (RuntimeException e) {
             logger.log(Logger.Level.ERROR, "ClientHandler", "Upload failed: " + e.getMessage(), e);
             writer.write(String.format(ERR_UPLOAD_FAILED, e.getMessage()) + "\n");
             writer.flush();
 
             // Reset timeout to normal
-            SocketUtils.configureStandardSocket(socket);
+            SocketHandler.configureStandardSocket(socket);
         }
     }
 
@@ -263,9 +278,16 @@ public class ClientHandler implements Runnable {
 
         String downloadFilename = tokenizer.nextToken();
 
+        // Check for blocked file types
+        if (FileValidationUtils.isBlockedFileType(downloadFilename)) {
+            writer.write(ERR_BLOCKED_FILE_TYPE + "\n");
+            writer.flush();
+            return;
+        }
+
         try {
             // Increase timeout during file transfer
-            SocketUtils.configureFileTransferSocket(socket);
+            SocketHandler.configureFileTransferSocket(socket);
 
             // Send the file
             fileManager.sendFile(downloadFilename, socket.getOutputStream());
@@ -292,14 +314,14 @@ public class ClientHandler implements Runnable {
             }
 
             // Reset timeout to normal
-            SocketUtils.configureStandardSocket(socket);
+            SocketHandler.configureStandardSocket(socket);
         } catch (RuntimeException e) {
             logger.log(Logger.Level.ERROR, "ClientHandler", "Error sending file: " + e.getMessage(), e);
             writer.write(String.format(ERR_DOWNLOAD_FAILED, e.getMessage()) + "\n");
             writer.flush();
 
             // Reset timeout to normal
-            SocketUtils.configureStandardSocket(socket);
+            SocketHandler.configureStandardSocket(socket);
         }
     }
 

@@ -1,3 +1,9 @@
+package service;
+
+import database.ConnectionManager;
+import utils.FileValidationUtils;
+import logs.Logger;
+
 import java.io.*;
 import java.net.URLDecoder;
 import java.security.MessageDigest;
@@ -6,10 +12,15 @@ import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import config.Config;
+
 public class FileManager {
     private static final Logger logger = Logger.getInstance();
     private static final int BUFFER_SIZE = Config.getBufferSize();
     private static final AtomicBoolean tablesVerified = new AtomicBoolean(false);
+
+    // Maximum file size (10MB)
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     // Error message constants - consolidated and cleaned up
     private static final String ERR_DECODE_FILENAME = "Failed to decode filename";
@@ -18,7 +29,8 @@ public class FileManager {
     private static final String ERR_INVALID_FILE_SIZE = "Invalid file size";
     private static final String ERR_INVALID_CHECKSUM = "Invalid checksum length";
     private static final String ERR_CHECKSUM_VERIFICATION = "Checksum verification failed";
-    private static final String ERR_ONLY_TXT_FILE = "Only .txt files are allowed";
+    private static final String ERR_BLOCKED_FILE_TYPE = "This file type is not allowed for security reasons";
+    private static final String ERR_FILE_TOO_LARGE = "File exceeds maximum size limit of 10MB";
 
     // Success messages
     private static final String SUCCESS_FILE_SAVED = "File saved to database";
@@ -34,7 +46,7 @@ public class FileManager {
     /**
      * Verifies the database tables needed for file storage
      * This is now a lightweight method that just marks tables as verified
-     * since the actual creation is handled by ConnectionPool
+     * since the actual creation is handled by ConnectionManager
      */
     public void verifyDatabaseTables() {
         if (tablesVerified.get()) {
@@ -44,7 +56,7 @@ public class FileManager {
 
         logger.log(Logger.Level.INFO, "FileManager", "Verifying database tables");
 
-        // Actual table creation is now handled by ConnectionPool.initializeDatabaseSchema()
+        // Actual table creation is now handled by ConnectionManager.initializeDatabaseSchema()
         // Just mark them as verified here
         tablesVerified.set(true);
         logger.log(Logger.Level.INFO, "FileManager", "Database tables verified");
@@ -62,7 +74,7 @@ public class FileManager {
      * Helper method to standardize database operations
      */
     private <T> T withConnection(DatabaseOperation<T> operation, T defaultValue) {
-        ConnectionPool pool = ConnectionPool.getInstance();
+        ConnectionManager pool = ConnectionManager.getInstance();
         Connection conn = null;
 
         try {
@@ -89,10 +101,10 @@ public class FileManager {
             // Decode the URL-encoded filename
             fileName = URLDecoder.decode(encodedFileName, StandardCharsets.UTF_8.toString());
 
-            // Check for .txt extension
-            if (!fileName.toLowerCase().endsWith(".txt")) {
-                logger.log(Logger.Level.ERROR, "FileManager", "Rejected non-txt file: " + fileName);
-                throw new RuntimeException(ERR_ONLY_TXT_FILE);
+            // Check for blocked file types
+            if (FileValidationUtils.isBlockedFileType(fileName)) {
+                logger.log(Logger.Level.ERROR, "FileManager", "Rejected blocked file type: " + fileName);
+                throw new RuntimeException(ERR_BLOCKED_FILE_TYPE);
             }
         } catch (UnsupportedEncodingException e) {
             logger.log(Logger.Level.ERROR, "FileManager", ERR_DECODE_FILENAME, e);
@@ -106,9 +118,9 @@ public class FileManager {
             long fileSize = dataIn.readLong();
             logger.log(Logger.Level.INFO, "FileManager", "File size reported: " + fileSize + " bytes");
 
-            if (fileSize <= 0 || fileSize > 10_000_000_000L) { // 10GB max
-                logger.log(Logger.Level.ERROR, "FileManager", ERR_INVALID_FILE_SIZE + ": " + fileSize);
-                throw new IOException(ERR_INVALID_FILE_SIZE + ": " + fileSize);
+            if (fileSize <= 0 || fileSize > MAX_FILE_SIZE) {
+                logger.log(Logger.Level.ERROR, "FileManager", ERR_FILE_TOO_LARGE + ": " + fileSize);
+                throw new IOException(ERR_FILE_TOO_LARGE + ": " + fileSize);
             }
 
             // Read and validate checksum
@@ -236,9 +248,9 @@ public class FileManager {
         }
 
         try {
-            // Reject non-txt file downloads
-            if (!fileName.toLowerCase().endsWith(".txt")) {
-                logger.log(Logger.Level.ERROR, "FileManager", "Rejected non-txt file download: " + fileName);
+            // Check for blocked file types
+            if (FileValidationUtils.isBlockedFileType(fileName)) {
+                logger.log(Logger.Level.ERROR, "FileManager", "Rejected blocked file type download: " + fileName);
                 DataOutputStream dataOut = new DataOutputStream(outputStream);
                 dataOut.writeLong(-1);  // Signal rejection
                 dataOut.flush();

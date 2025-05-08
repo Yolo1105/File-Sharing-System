@@ -13,7 +13,7 @@
 [2025-05-08 00:17:55] [INFO] [FileManager] Verifying database tables
 [2025-05-08 00:17:55] [INFO] [FileManager] Database tables verified
 [2025-05-08 00:17:55] [INFO] [ClientHandler] New client connected: /127.0.0.1:53722
-[2025-05-08 00:17:58] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-08 00:17:58] [INFO]and  [Broadcaster] Registered client: Mohan
 [2025-05-08 00:17:58] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
 [2025-05-08 00:18:01] [INFO] [Logger] Logging system initialized
 [2025-05-08 00:18:01] [INFO] [Client] Starting client...
@@ -57,3 +57,63 @@
 [2025-05-08 15:10:22] [INFO] [Logger] Logging system shutting down
 [2025-05-08 15:10:22] [INFO] [Logger] Logging system shutting down
 [2025-05-08 15:10:22] [INFO] [MainServer] Server shutting down...
+[2025-05-08 16:52:06] [INFO] [Logger] Logging system initialized
+[2025-05-08 16:52:06] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 16:52:06] [INFO] [MainServer] Initializing server...
+[2025-05-08 16:52:06] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 16:52:06] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 16:52:06] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 16:52:06] [INFO] [MainServer] Server started successfully
+[2025-05-08 16:52:09] [INFO] [Logger] Logging system initialized
+[2025-05-08 16:52:09] [INFO] [Client] Starting client...
+[2025-05-08 16:52:09] [INFO] [MainServer] New connection accepted from: /127.0.0.1:52245 (Active connections: 1)
+[2025-05-08 16:52:09] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 16:52:09] [INFO] [FileManager] FileManager initialized
+[2025-05-08 16:52:09] [INFO] [FileManager] Verifying database tables
+[2025-05-08 16:52:09] [INFO] [FileManager] Database tables verified
+[2025-05-08 16:52:09] [INFO] [ClientHandler] New client connected: /127.0.0.1:52245
+[2025-05-08 16:52:12] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-08 16:52:12] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-08 16:52:15] [INFO] [Logger] Logging system initialized
+[2025-05-08 16:52:15] [INFO] [Client] Starting client...
+[2025-05-08 16:52:15] [INFO] [MainServer] New connection accepted from: /127.0.0.1:52249 (Active connections: 2)
+[2025-05-08 16:52:15] [INFO] [ClientHandler] New client connected: /127.0.0.1:52249
+[2025-05-08 16:52:15] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 16:52:16] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-08 16:52:16] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has joined the server. (excluding MOMO) to 1 clients
+[2025-05-08 16:52:36] [INFO] [MainServer] New connection accepted from: /127.0.0.1:52254 (Active connections: 3)
+[2025-05-08 16:52:36] [INFO] [ClientHandler] New client connected: /127.0.0.1:52254
+[2025-05-08 16:52:36] [INFO] [ClientHandler] Mohan_upload issued command: UPLOAD robomaster+final.pdf
+[2025-05-08 16:52:36] [INFO] [FileManager] Starting file reception for: robomaster+final.pdf
+[2025-05-08 16:52:36] [INFO] [FileManager] Receiving file: robomaster final.pdf
+[2025-05-08 16:52:36] [INFO] [FileManager] File size reported: 1534350 bytes
+[2025-05-08 16:52:36] [INFO] [FileManager] Checksum length: 32
+[2025-05-08 16:52:36] [INFO] [FileManager] Checksum received
+[2025-05-08 16:52:36] [INFO] [FileManager] Starting file data transfer
+[2025-05-08 16:52:36] [INFO] [FileManager] Receive progress: 21%
+[2025-05-08 16:52:36] [INFO] [FileManager] Receive progress: 42%
+[2025-05-08 16:52:36] [INFO] [FileManager] Receive progress: 64%
+[2025-05-08 16:52:36] [INFO] [FileManager] Receive progress: 85%
+[2025-05-08 16:52:36] [INFO] [FileManager] File data transfer complete
+[2025-05-08 16:52:36] [INFO] [FileManager] Checksum verification successful
+[2025-05-08 16:52:36] [INFO] [FileManager] File saved to database: robomaster final.pdf
+[2025-05-08 16:52:36] [INFO] [FileManager] File received successfully: robomaster final.pdf
+[2025-05-08 16:52:36] [INFO] [DBLogger] Initializing database logger - tables should be already created
+[2025-05-08 16:52:36] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-08 16:52:36] [INFO] [DBLogger] Logged: Mohan UPLOAD robomaster+final.pdf
+[2025-05-08 16:52:36] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_upload
+[2025-05-08 16:52:36] [INFO] [MainServer] Connection closed. Active connections: 2
+[2025-05-08 16:52:46] [INFO] [MainServer] New connection accepted from: /127.0.0.1:52256 (Active connections: 3)
+[2025-05-08 16:52:46] [INFO] [ClientHandler] New client connected: /127.0.0.1:52256
+[2025-05-08 16:52:46] [INFO] [ClientHandler] Mohan_download issued command: DOWNLOAD robomaster+final.pdf
+[2025-05-08 16:52:46] [INFO] [FileManager] Sending file: robomaster final.pdf
+[2025-05-08 16:52:46] [INFO] [FileManager] Sending file size: 1534350 bytes
+[2025-05-08 16:52:46] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-08 16:52:46] [INFO] [FileManager] File sent successfully: robomaster final.pdf
+[2025-05-08 16:52:46] [INFO] [DBLogger] Logged: Mohan DOWNLOAD robomaster+final.pdf
+[2025-05-08 16:52:46] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
+[2025-05-08 16:52:46] [INFO] [MainServer] Connection closed. Active connections: 2
+[2025-05-08 16:53:02] [INFO] [Logger] Logging system shutting down
+[2025-05-08 16:53:02] [INFO] [MainServer] Server shutting down...
+[2025-05-08 16:53:02] [INFO] [Logger] Logging system shutting down
+[2025-05-08 16:53:03] [INFO] [Logger] Logging system shutting down

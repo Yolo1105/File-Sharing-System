@@ -1,3 +1,6 @@
+package logs;
+import utils.ResourceUtils;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;

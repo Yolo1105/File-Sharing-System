@@ -1,3 +1,5 @@
+package config;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,7 +18,22 @@ public class Config {
     private static final int DEFAULT_SERVER_PORT = 9000;
     private static final int DEFAULT_MAX_THREADS = 50;
     private static final String DEFAULT_DB_URL = "jdbc:sqlite:file_storage.db";
-    private static final String DEFAULT_FILES_DIRECTORY = "server_files/";
+    private static final int DEFAULT_DB_MAX_CONNECTIONS = 5;
+    private static final int DEFAULT_DB_CONNECTION_TIMEOUT = 30;
+    private static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final String DEFAULT_DOWNLOADS_DIR = "downloads/";
+    private static final int DEFAULT_CORE_POOL_SIZE = 10;
+
+    // Protocol constants for client-server communication
+    public static final class Protocol {
+        public static final String CMD_UPLOAD = "UPLOAD";
+        public static final String CMD_DOWNLOAD = "DOWNLOAD";
+        public static final String CMD_LIST = "LIST";
+        public static final String CMD_LOGS = "LOGS";
+        public static final String RESPONSE_END_MARKER = "*END*";
+        public static final String CLIENT_ID_PREFIX = "CLIENT_ID ";
+        public static final String NOTIFICATION_PREFIX = "SERVER_NOTIFICATION:";
+    }
 
     static {
         boolean loadedConfig = false;
@@ -56,22 +73,27 @@ public class Config {
         // Log the loaded configuration
         System.out.println("[CONFIG] Server port: " + getServerPort());
         System.out.println("[CONFIG] Max threads: " + getMaxThreads());
-        System.out.println("[CONFIG] Files directory: " + getFilesDirectory());
         System.out.println("[CONFIG] DB URL: " + getDbUrl());
         System.out.println("[CONFIG] Debug mode: " + getProperty("debug.mode", "false"));
         System.out.println("[CONFIG] Buffer size: " + getBufferSize());
         System.out.println("[CONFIG] Socket timeout: " + getSocketTimeout());
+        System.out.println("[CONFIG] Max file size: " + getMaxFileSize() + " bytes");
+        System.out.println("[CONFIG] DB max connections: " + getDbMaxConnections());
     }
 
     private static void setDefaults() {
         properties.setProperty("server.port", String.valueOf(DEFAULT_SERVER_PORT));
         properties.setProperty("server.max_threads", String.valueOf(DEFAULT_MAX_THREADS));
-        properties.setProperty("files.directory", DEFAULT_FILES_DIRECTORY);
+        properties.setProperty("server.core_pool_size", String.valueOf(DEFAULT_CORE_POOL_SIZE));
         properties.setProperty("db.url", DEFAULT_DB_URL);
+        properties.setProperty("db.max_connections", String.valueOf(DEFAULT_DB_MAX_CONNECTIONS));
+        properties.setProperty("db.connection_timeout", String.valueOf(DEFAULT_DB_CONNECTION_TIMEOUT));
         properties.setProperty("server.host", "localhost");
         properties.setProperty("debug.mode", "false");
         properties.setProperty("buffer.size", String.valueOf(DEFAULT_BUFFER_SIZE));
         properties.setProperty("socket.timeout", String.valueOf(DEFAULT_SOCKET_TIMEOUT));
+        properties.setProperty("file.max_size", String.valueOf(DEFAULT_MAX_FILE_SIZE));
+        properties.setProperty("downloads.dir", DEFAULT_DOWNLOADS_DIR);
         System.out.println("[CONFIG] Default configuration set");
     }
 
@@ -122,6 +144,33 @@ public class Config {
             return result;
         } catch (NumberFormatException e) {
             System.err.println("[CONFIG] Invalid integer property: " + key + " = " + value);
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Gets a long property with default value
+     */
+    public static long getLongProperty(String key, long defaultValue) {
+        // Check cache first
+        if (propertyCache.containsKey(key)) {
+            Object value = propertyCache.get(key);
+            if (value instanceof Long) {
+                return (Long) value;
+            }
+        }
+
+        String value = properties.getProperty(key);
+        if (value == null) {
+            return defaultValue;
+        }
+
+        try {
+            long result = Long.parseLong(value);
+            propertyCache.put(key, result);
+            return result;
+        } catch (NumberFormatException e) {
+            System.err.println("[CONFIG] Invalid long property: " + key + " = " + value);
             return defaultValue;
         }
     }
@@ -187,27 +236,7 @@ public class Config {
      * Gets the core pool size for thread pool
      */
     public static int getCorePoolSize() {
-        int maxThreads = getMaxThreads();
-        return Math.max(5, maxThreads / 2);
-    }
-
-    /**
-     * Gets the directory for storing files
-     */
-    public static String getFilesDirectory() {
-        // Check cache first
-        if (propertyCache.containsKey("files.directory")) {
-            return (String) propertyCache.get("files.directory");
-        }
-
-        String dir = properties.getProperty("files.directory", DEFAULT_FILES_DIRECTORY);
-        // Ensure directory ends with file separator
-        if (!dir.endsWith("/") && !dir.endsWith("\\")) {
-            dir = dir + File.separator;
-        }
-
-        propertyCache.put("files.directory", dir);
-        return dir;
+        return getIntProperty("server.core_pool_size", DEFAULT_CORE_POOL_SIZE);
     }
 
     /**
@@ -222,6 +251,34 @@ public class Config {
         String url = properties.getProperty("db.url", DEFAULT_DB_URL);
         propertyCache.put("db.url", url);
         return url;
+    }
+
+    /**
+     * Gets the maximum number of database connections
+     */
+    public static int getDbMaxConnections() {
+        return getIntProperty("db.max_connections", DEFAULT_DB_MAX_CONNECTIONS);
+    }
+
+    /**
+     * Gets the database connection timeout in seconds
+     */
+    public static int getDbConnectionTimeout() {
+        return getIntProperty("db.connection_timeout", DEFAULT_DB_CONNECTION_TIMEOUT);
+    }
+
+    /**
+     * Gets the maximum allowed file size
+     */
+    public static long getMaxFileSize() {
+        return getLongProperty("file.max_size", DEFAULT_MAX_FILE_SIZE);
+    }
+
+    /**
+     * Gets the downloads directory
+     */
+    public static String getDownloadsDir() {
+        return getProperty("downloads.dir", DEFAULT_DOWNLOADS_DIR);
     }
 
     /**
@@ -267,19 +324,6 @@ public class Config {
     }
 
     /**
-     * Protocol constants for client-server communication
-     */
-    public static final class Protocol {
-        public static final String CMD_UPLOAD = "UPLOAD";
-        public static final String CMD_DOWNLOAD = "DOWNLOAD";
-        public static final String CMD_LIST = "LIST";
-        public static final String CMD_LOGS = "LOGS";
-        public static final String RESPONSE_END_MARKER = "*END*";
-        public static final String CLIENT_ID_PREFIX = "CLIENT_ID ";
-        public static final String NOTIFICATION_PREFIX = "SERVER_NOTIFICATION:";
-    }
-
-    /**
      * Creates a config.properties file with optimized default values if it doesn't exist
      */
     public static void createDefaultConfigFile() {
@@ -289,12 +333,16 @@ public class Config {
                 Properties defaultProps = new Properties();
                 defaultProps.setProperty("server.port", String.valueOf(DEFAULT_SERVER_PORT));
                 defaultProps.setProperty("server.max_threads", String.valueOf(DEFAULT_MAX_THREADS));
-                defaultProps.setProperty("files.directory", DEFAULT_FILES_DIRECTORY);
+                defaultProps.setProperty("server.core_pool_size", String.valueOf(DEFAULT_CORE_POOL_SIZE));
                 defaultProps.setProperty("db.url", DEFAULT_DB_URL);
+                defaultProps.setProperty("db.max_connections", String.valueOf(DEFAULT_DB_MAX_CONNECTIONS));
+                defaultProps.setProperty("db.connection_timeout", String.valueOf(DEFAULT_DB_CONNECTION_TIMEOUT));
                 defaultProps.setProperty("server.host", "localhost");
                 defaultProps.setProperty("debug.mode", "false");
                 defaultProps.setProperty("buffer.size", String.valueOf(DEFAULT_BUFFER_SIZE));
                 defaultProps.setProperty("socket.timeout", String.valueOf(DEFAULT_SOCKET_TIMEOUT));
+                defaultProps.setProperty("file.max_size", String.valueOf(DEFAULT_MAX_FILE_SIZE));
+                defaultProps.setProperty("downloads.dir", DEFAULT_DOWNLOADS_DIR);
 
                 try (java.io.FileOutputStream out = new java.io.FileOutputStream(configFile)) {
                     defaultProps.store(out, "Optimized configuration for File Sharing System");
