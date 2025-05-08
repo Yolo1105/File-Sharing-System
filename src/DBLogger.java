@@ -3,18 +3,17 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class DBLogger {
-    private static final Logger logger = Logger.getInstance();
     private static volatile boolean initialized = false;
-
-    static {
-        initializeDatabase();
-    }
+    private static boolean initializing = false;
 
     /**
      * Initializes the database and ensures the schema is correct
      */
     private static synchronized void initializeDatabase() {
-        if (initialized) return;
+        if (initialized || initializing) return;
+
+        initializing = true;
+        System.out.println("[INIT] Initializing DBLogger...");
 
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection conn = null;
@@ -42,17 +41,27 @@ public class DBLogger {
                             timestamp TEXT NOT NULL
                         )
                     """);
-                    logger.log(Logger.Level.INFO, "DBLogger", "Created logs table with correct schema");
+                    System.out.println("[INIT] Created logs table with correct schema");
                 }
             }
 
             initialized = true;
-            logger.log(Logger.Level.INFO, "DBLogger", "Database logger initialized successfully");
+            System.out.println("[INIT] Database logger initialized successfully");
+
+            // Now it's safe to use the Logger
+            try {
+                Logger.getInstance().log(Logger.Level.INFO, "DBLogger", "Database logger initialized successfully");
+            } catch (Exception e) {
+                // If logger still has issues, just use console logging
+                System.out.println("[INFO] Database logger initialized successfully");
+            }
 
         } catch (SQLException e) {
-            logger.log(Logger.Level.FATAL, "DBLogger", "Failed to initialize database: " + e.getMessage(), e);
+            System.err.println("[FATAL] Failed to initialize database: " + e.getMessage());
+            e.printStackTrace();
         } finally {
             pool.releaseConnection(conn);
+            initializing = false;
         }
     }
 
@@ -63,6 +72,7 @@ public class DBLogger {
      * @param filename Filename
      */
     public static void log(String client, String action, String filename) {
+        // Initialize if needed
         if (!initialized) {
             initializeDatabase();
         }
@@ -85,10 +95,23 @@ public class DBLogger {
                 pstmt.setString(4, timestamp);
                 pstmt.executeUpdate();
 
-                logger.log(Logger.Level.INFO, "DBLogger", "Logged: " + client + " " + action + " " + filename);
+                // Log to regular logger if available
+                try {
+                    Logger.getInstance().log(Logger.Level.INFO, "DBLogger", "Logged: " + client + " " + action + " " + filename);
+                } catch (Exception e) {
+                    // Fall back to console
+                    System.out.println("[INFO] Logged: " + client + " " + action + " " + filename);
+                }
             }
         } catch (SQLException e) {
-            logger.log(Logger.Level.ERROR, "DBLogger", "Failed to log action: " + e.getMessage(), e);
+            System.err.println("[ERROR] Failed to log action: " + e.getMessage());
+            try {
+                Logger.getInstance().log(Logger.Level.ERROR, "DBLogger", "Failed to log action: " + e.getMessage(), e);
+            } catch (Exception ex) {
+                // Logger issue, just use console
+                System.err.println("[ERROR] Failed to log action: " + e.getMessage());
+                e.printStackTrace();
+            }
         } finally {
             pool.releaseConnection(conn);
         }
@@ -136,7 +159,13 @@ public class DBLogger {
             }
         } catch (SQLException e) {
             result.append("ERROR: Failed to retrieve logs: ").append(e.getMessage()).append("\n");
-            logger.log(Logger.Level.ERROR, "DBLogger", "Failed to retrieve logs: " + e.getMessage(), e);
+            try {
+                Logger.getInstance().log(Logger.Level.ERROR, "DBLogger", "Failed to retrieve logs: " + e.getMessage(), e);
+            } catch (Exception ex) {
+                // Logger issue, just use console
+                System.err.println("[ERROR] Failed to retrieve logs: " + e.getMessage());
+                e.printStackTrace();
+            }
         } finally {
             pool.releaseConnection(conn);
         }
@@ -166,10 +195,17 @@ public class DBLogger {
                 """);
 
                 initialized = true;
-                logger.log(Logger.Level.INFO, "DBLogger", "Database reset successfully");
+                Logger.getInstance().log(Logger.Level.INFO, "DBLogger", "Database reset successfully");
             }
         } catch (SQLException e) {
-            logger.log(Logger.Level.ERROR, "DBLogger", "Failed to reset database: " + e.getMessage(), e);
+            System.err.println("[ERROR] Failed to reset database: " + e.getMessage());
+            try {
+                Logger.getInstance().log(Logger.Level.ERROR, "DBLogger", "Failed to reset database: " + e.getMessage(), e);
+            } catch (Exception ex) {
+                // Logger issue, just use console
+                System.err.println("[ERROR] Failed to reset database: " + e.getMessage());
+                e.printStackTrace();
+            }
         } finally {
             pool.releaseConnection(conn);
         }

@@ -261,10 +261,10 @@ public class Client {
                 if (uploadResponse != null) {
                     System.out.println(uploadResponse);
                 }
-                System.out.println("[SUCCESS] File '" + filename + "' was successfully uploaded to the server.");
+                System.out.println("[SUCCESS] File '" + filename + "' was successfully uploaded to the server database.");
             } catch (SocketTimeoutException e) {
                 // Assume success if no error occurred during transfer
-                System.out.println("[SUCCESS] File '" + filename + "' was successfully uploaded to the server.");
+                System.out.println("[SUCCESS] File '" + filename + "' was successfully uploaded to the server database.");
             }
 
             System.out.println("[INFO] Upload completed");

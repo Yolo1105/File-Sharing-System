@@ -26,18 +26,24 @@ public class Logger {
     // Log level threshold - only log messages at this level or higher
     private Level logLevelThreshold = Level.INFO;
     private boolean debugMode = false;
+    private boolean initialized = false;
 
     private Logger() {
         try {
+            // Initialize log file
             logWriter = new PrintWriter(new FileWriter(LOG_FILE, true), true);
+
             // Start the log flushing task that runs every 1 second
             scheduler.scheduleAtFixedRate(this::flushLogQueue, 1, 1, TimeUnit.SECONDS);
 
-            // Check for debug mode in Config
-            String debugModeStr = Config.getProperty("debug.mode", "false");
-            debugMode = Boolean.parseBoolean(debugModeStr);
+            // Mark as initialized
+            initialized = true;
 
-            log(Level.INFO, "Logger", "Logging system initialized. Debug mode: " + debugMode);
+            // Add simple console logging indicating initialization
+            System.out.println("[LOGGER] Logging system initialized");
+
+            // Queue first log message
+            logQueue.add(formatLogEntry(Level.INFO, "Logger", "Logging system initialized"));
         } catch (IOException e) {
             System.err.println("Failed to initialize logger: " + e.getMessage());
             e.printStackTrace();
@@ -69,6 +75,14 @@ public class Logger {
     }
 
     /**
+     * Formats a log entry with timestamp and level
+     */
+    private String formatLogEntry(Level level, String source, String message) {
+        String timestamp = LocalDateTime.now().format(timeFormatter);
+        return String.format("[%s] [%s] [%s] %s", timestamp, level, source, message);
+    }
+
+    /**
      * Logs a message if its level is at or above the current threshold
      */
     public void log(Level level, String source, String message) {
@@ -82,8 +96,7 @@ public class Logger {
             return;
         }
 
-        String timestamp = LocalDateTime.now().format(timeFormatter);
-        String logEntry = String.format("[%s] [%s] [%s] %s", timestamp, level, source, message);
+        String logEntry = formatLogEntry(level, source, message);
 
         // Write to console for important logs
         if (level == Level.ERROR || level == Level.FATAL || level == Level.WARNING) {
@@ -120,39 +133,52 @@ public class Logger {
      * Flushes queued log entries to file
      */
     private void flushLogQueue() {
-        if (logQueue.isEmpty()) {
+        if (logQueue.isEmpty() || !initialized) {
             return;
         }
 
-        synchronized (logWriter) {
-            String entry;
-            while ((entry = logQueue.poll()) != null) {
-                logWriter.println(entry);
+        try {
+            synchronized (logWriter) {
+                String entry;
+                while ((entry = logQueue.poll()) != null) {
+                    logWriter.println(entry);
+                }
+                logWriter.flush();
             }
-            logWriter.flush();
+        } catch (Exception e) {
+            // Log to console if there's an error writing to the log file
+            System.err.println("Error flushing log queue: " + e.getMessage());
         }
     }
 
     private void close() {
-        synchronized (logWriter) {
-            log(Level.INFO, "Logger", "Logging system shutting down");
+        if (!initialized) {
+            return;
+        }
 
-            // Shutdown scheduler
-            scheduler.shutdown();
-            try {
-                if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+        try {
+            synchronized (logWriter) {
+                log(Level.INFO, "Logger", "Logging system shutting down");
+
+                // Shutdown scheduler
+                scheduler.shutdown();
+                try {
+                    if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                        scheduler.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
                     scheduler.shutdownNow();
+                    Thread.currentThread().interrupt();
                 }
-            } catch (InterruptedException e) {
-                scheduler.shutdownNow();
-                Thread.currentThread().interrupt();
+
+                // Flush any remaining logs
+                flushLogQueue();
+
+                // Close writer
+                logWriter.close();
             }
-
-            // Flush any remaining logs
-            flushLogQueue();
-
-            // Close writer
-            logWriter.close();
+        } catch (Exception e) {
+            System.err.println("Error closing logger: " + e.getMessage());
         }
     }
 }

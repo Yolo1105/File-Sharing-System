@@ -1,8 +1,9 @@
-import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.sql.Connection;
+import java.sql.Statement;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -28,13 +29,19 @@ public class MainServer {
         // Set core pool size to a lower value than max to conserve resources
         int corePoolSize = Math.max(5, maxThreadsInt / 2);
 
-        // Initialize directories
-        initializeDirectories();
+        // Initialize database tables AFTER logger is fully initialized
+        logger.log(Logger.Level.INFO, "MainServer", "Initializing database...");
+        try {
+            initializeDatabase();
+        } catch (Exception e) {
+            logger.log(Logger.Level.FATAL, "MainServer", "Failed to initialize database: " + e.getMessage(), e);
+            System.exit(1);
+        }
 
         // Create an improved thread pool with a queue
         pool = new ThreadPoolExecutor(
                 corePoolSize,                  // Core pool size
-                maxThreadsInt,                  // Maximum pool size
+                maxThreadsInt,                 // Maximum pool size
                 60L, TimeUnit.SECONDS,         // Keep alive time for idle threads
                 new LinkedBlockingQueue<>(100), // Queue for waiting tasks
                 Executors.defaultThreadFactory(),
@@ -99,17 +106,35 @@ public class MainServer {
     }
 
     /**
-     * Initializes required directories for the server
+     * Initializes required database tables for file storage
      */
-    private static void initializeDirectories() {
-        // Create the server files directory
-        File serverFilesDir = new File(FileManager.SHARED_DIR);
-        if (!serverFilesDir.exists()) {
-            if (serverFilesDir.mkdirs()) {
-                logger.log(Logger.Level.INFO, "MainServer", "Created server files directory: " + serverFilesDir.getAbsolutePath());
-            } else {
-                logger.log(Logger.Level.ERROR, "MainServer", "Failed to create server files directory: " + serverFilesDir.getAbsolutePath());
+    private static void initializeDatabase() {
+        ConnectionPool pool = ConnectionPool.getInstance();
+        Connection conn = null;
+
+        try {
+            conn = pool.getConnection();
+
+            try (Statement stmt = conn.createStatement()) {
+                // Create files table if it doesn't exist
+                stmt.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS files (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        filename TEXT NOT NULL UNIQUE,
+                        content BLOB NOT NULL,
+                        file_size INTEGER NOT NULL,
+                        checksum BLOB NOT NULL,
+                        upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """);
+
+                logger.log(Logger.Level.INFO, "MainServer", "Database file storage initialized");
             }
+        } catch (Exception e) {
+            logger.log(Logger.Level.FATAL, "MainServer", "Failed to initialize database tables", e);
+            throw new RuntimeException("Failed to initialize database", e);
+        } finally {
+            pool.releaseConnection(conn);
         }
     }
 

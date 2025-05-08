@@ -2,29 +2,63 @@ import java.io.*;
 import java.net.URLDecoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.nio.charset.StandardCharsets;
+import java.sql.*;
 
 public class FileManager {
-    public static final String SHARED_DIR = Config.getFilesDirectory();
-    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private static final Logger logger = Logger.getInstance();
     private static final int BUFFER_SIZE = 32768; // Increased from 8192 to 32KB for better performance
 
+    // Keep this for backward compatibility with some code referencing it
+    public static final String SHARED_DIR = Config.getFilesDirectory();
+
     public FileManager() {
-        File dir = new File(SHARED_DIR);
-        if (!dir.exists()) {
-            logger.log(Logger.Level.INFO, "FileManager", "Creating server storage directory: " + SHARED_DIR);
-            boolean created = dir.mkdirs();
-            if (!created) {
-                logger.log(Logger.Level.ERROR, "FileManager", "Failed to create server storage directory: " + SHARED_DIR);
+        logger.log(Logger.Level.INFO, "FileManager", "FileManager initialized");
+    }
+
+    /**
+     * Verifies database tables needed for file storage
+     * This is called AFTER database is initialized by MainServer
+     */
+    public void verifyDatabaseTables() {
+        ConnectionPool pool = ConnectionPool.getInstance();
+        Connection conn = null;
+
+        try {
+            conn = pool.getConnection();
+
+            // Check if files table exists
+            boolean tableExists = false;
+            try (ResultSet rs = conn.getMetaData().getTables(null, null, "files", null)) {
+                tableExists = rs.next();
             }
+
+            if (!tableExists) {
+                try (Statement stmt = conn.createStatement()) {
+                    // Create files table if it doesn't exist
+                    stmt.executeUpdate("""
+                        CREATE TABLE IF NOT EXISTS files (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            filename TEXT NOT NULL UNIQUE,
+                            content BLOB NOT NULL,
+                            file_size INTEGER NOT NULL,
+                            checksum BLOB NOT NULL,
+                            upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """);
+                }
+                logger.log(Logger.Level.INFO, "FileManager", "Created database files table");
+            } else {
+                logger.log(Logger.Level.INFO, "FileManager", "Database files table already exists");
+            }
+        } catch (SQLException e) {
+            logger.log(Logger.Level.ERROR, "FileManager", "Failed to verify database tables: " + e.getMessage(), e);
+        } finally {
+            pool.releaseConnection(conn);
         }
     }
 
     public void receiveFile(String encodedFileName, DataInputStream dataIn) {
-        // Use write lock for file upload
-        lock.writeLock().lock();
         logger.log(Logger.Level.INFO, "FileManager", "Starting file reception for: " + encodedFileName);
 
         String fileName;
@@ -67,70 +101,86 @@ public class FileManager {
             dataIn.readFully(expectedChecksum);
             logger.log(Logger.Level.INFO, "FileManager", "Checksum received");
 
-            // Sanitize filename and prepare temp/final paths
+            // Sanitize filename
             String sanitizedFileName = sanitizeFileName(fileName);
-            String tempFileName = "temp_" + System.currentTimeMillis() + "_" + sanitizedFileName.trim();
-            File tempFile = new File(SHARED_DIR + tempFileName);
-            File outputFile = new File(SHARED_DIR + sanitizedFileName.trim());
 
-            try (BufferedOutputStream fos = new BufferedOutputStream(new FileOutputStream(tempFile), BUFFER_SIZE)) {
-                byte[] buffer = new byte[BUFFER_SIZE]; // Increased buffer size
-                long remaining = fileSize;
-                int count;
-                long lastLoggedProgress = 0;
+            // Read file data into buffer
+            ByteArrayOutputStream fileBuffer = new ByteArrayOutputStream();
+            byte[] buffer = new byte[BUFFER_SIZE];
+            long remaining = fileSize;
+            int count;
+            long lastLoggedProgress = 0;
 
-                logger.log(Logger.Level.INFO, "FileManager", "Starting file data transfer for: " + fileName);
+            logger.log(Logger.Level.INFO, "FileManager", "Starting file data transfer for: " + fileName);
 
-                while (remaining > 0 &&
-                        (count = dataIn.read(buffer, 0, (int) Math.min(buffer.length, remaining))) != -1) {
-                    fos.write(buffer, 0, count);
-                    remaining -= count;
+            while (remaining > 0 &&
+                    (count = dataIn.read(buffer, 0, (int) Math.min(buffer.length, remaining))) != -1) {
+                fileBuffer.write(buffer, 0, count);
+                remaining -= count;
 
-                    // Log progress less frequently for better performance
-                    if (fileSize > 1000000 && (fileSize - remaining) - lastLoggedProgress > fileSize / 5) {
-                        lastLoggedProgress = fileSize - remaining;
-                        int progress = (int)((fileSize - remaining) * 100 / fileSize);
-                        logger.log(Logger.Level.INFO, "FileManager", "Receive progress: " + progress + "%");
-                    }
+                // Log progress less frequently for better performance
+                if (fileSize > 1000000 && (fileSize - remaining) - lastLoggedProgress > fileSize / 5) {
+                    lastLoggedProgress = fileSize - remaining;
+                    int progress = (int)((fileSize - remaining) * 100 / fileSize);
+                    logger.log(Logger.Level.INFO, "FileManager", "Receive progress: " + progress + "%");
                 }
-                fos.flush();
-                logger.log(Logger.Level.INFO, "FileManager", "File data transfer complete");
             }
+            logger.log(Logger.Level.INFO, "FileManager", "File data transfer complete");
+
+            // Get the file content as byte array
+            byte[] fileContent = fileBuffer.toByteArray();
 
             // Verify checksum
-            byte[] actualChecksum = calculateChecksum(tempFile);
+            byte[] actualChecksum = calculateChecksum(fileContent);
             boolean checksumMatch = MessageDigest.isEqual(expectedChecksum, actualChecksum);
 
             if (!checksumMatch) {
                 logger.log(Logger.Level.ERROR, "FileManager", "Checksum verification failed for file: " + fileName);
-                tempFile.delete();
                 throw new IOException("File transfer failed: Checksum verification failed");
             }
             logger.log(Logger.Level.INFO, "FileManager", "Checksum verification successful");
 
-            // Replace old file if exists
-            if (outputFile.exists()) {
-                outputFile.delete();
-            }
-            if (!tempFile.renameTo(outputFile)) {
-                logger.log(Logger.Level.ERROR, "FileManager", "Failed to rename temp file to: " + fileName);
-                throw new IOException("File transfer failed: Could not save file");
-            }
+            // Save file to database
+            saveFileToDatabase(sanitizedFileName, fileContent, fileSize, expectedChecksum);
 
-            logger.log(Logger.Level.INFO, "FileManager", "File received and saved to: " + outputFile.getAbsolutePath());
+            logger.log(Logger.Level.INFO, "FileManager", "File received and saved to database: " + sanitizedFileName);
 
-        } catch (IOException | NoSuchAlgorithmException e) {
+        } catch (IOException | NoSuchAlgorithmException | SQLException e) {
             logger.log(Logger.Level.ERROR, "FileManager", "Failed to receive file: " + fileName, e);
             throw new RuntimeException("File transfer failed", e);
+        }
+    }
+
+    private void saveFileToDatabase(String fileName, byte[] content, long fileSize, byte[] checksum) throws SQLException {
+        ConnectionPool pool = ConnectionPool.getInstance();
+        Connection conn = null;
+
+        try {
+            conn = pool.getConnection();
+
+            // First try to delete if file exists
+            try (PreparedStatement pstmt = conn.prepareStatement("DELETE FROM files WHERE filename = ?")) {
+                pstmt.setString(1, fileName);
+                pstmt.executeUpdate();
+            }
+
+            // Now insert the new file
+            try (PreparedStatement pstmt = conn.prepareStatement(
+                    "INSERT INTO files (filename, content, file_size, checksum) VALUES (?, ?, ?, ?)")) {
+                pstmt.setString(1, fileName);
+                pstmt.setBytes(2, content);
+                pstmt.setLong(3, fileSize);
+                pstmt.setBytes(4, checksum);
+                pstmt.executeUpdate();
+
+                logger.log(Logger.Level.INFO, "FileManager", "File saved to database: " + fileName);
+            }
         } finally {
-            lock.writeLock().unlock();
+            pool.releaseConnection(conn);
         }
     }
 
     public void sendFile(String encodedFileName, OutputStream outputStream) {
-        // Use read lock for file download (allows multiple simultaneous downloads)
-        lock.readLock().lock();
-
         String fileName;
         try {
             fileName = URLDecoder.decode(encodedFileName, StandardCharsets.UTF_8.toString());
@@ -149,104 +199,140 @@ public class FileManager {
                 return;
             }
 
-            // Sanitize the filename to prevent directory traversal attacks
+            // Sanitize the filename to prevent SQL injection
             String sanitizedFileName = sanitizeFileName(fileName);
-            File inputFile = new File(SHARED_DIR + sanitizedFileName.trim());
 
             // Use buffered streams for better performance
             DataOutputStream dataOut = new DataOutputStream(new BufferedOutputStream(outputStream, BUFFER_SIZE));
 
-            if (!inputFile.exists() || !inputFile.isFile()) {
-                logger.log(Logger.Level.WARNING, "FileManager", "File not found: " + inputFile.getAbsolutePath());
+            // Retrieve file from database
+            FileData fileData = getFileFromDatabase(sanitizedFileName);
+
+            if (fileData == null) {
+                logger.log(Logger.Level.WARNING, "FileManager", "File not found in database: " + sanitizedFileName);
                 dataOut.writeLong(-1); // Indicate file not found
                 dataOut.flush();
                 return;
             }
 
-            logger.log(Logger.Level.INFO, "FileManager", "Sending file: " + inputFile.getName());
-
-            long fileSize = inputFile.length();
-            byte[] checksum = calculateChecksum(inputFile);
+            logger.log(Logger.Level.INFO, "FileManager", "Sending file: " + sanitizedFileName);
 
             // Send file size
-            dataOut.writeLong(fileSize);
-            logger.log(Logger.Level.INFO, "FileManager", "Sending file size: " + fileSize + " bytes");
+            dataOut.writeLong(fileData.fileSize);
+            logger.log(Logger.Level.INFO, "FileManager", "Sending file size: " + fileData.fileSize + " bytes");
 
             // Send checksum
-            dataOut.writeInt(checksum.length);
-            dataOut.write(checksum);
-            logger.log(Logger.Level.INFO, "FileManager", "Sending checksum of length: " + checksum.length + " bytes");
+            dataOut.writeInt(fileData.checksum.length);
+            dataOut.write(fileData.checksum);
+            logger.log(Logger.Level.INFO, "FileManager", "Sending checksum of length: " + fileData.checksum.length + " bytes");
             dataOut.flush();
 
-            // Send file contents with buffered streams
-            try (BufferedInputStream fis = new BufferedInputStream(new FileInputStream(inputFile), BUFFER_SIZE)) {
-                byte[] buffer = new byte[BUFFER_SIZE]; // Increased buffer size
-                int count;
-                long totalSent = 0;
-                long lastLoggedProgress = 0;
+            // Send file contents
+            byte[] content = fileData.content;
+            dataOut.write(content);
+            dataOut.flush();
 
-                while ((count = fis.read(buffer)) > 0) {
-                    dataOut.write(buffer, 0, count);
-                    totalSent += count;
+            logger.log(Logger.Level.INFO, "FileManager", "File transfer complete: " + fileName);
 
-                    // Log progress less frequently for better performance
-                    if (fileSize > 1000000 && totalSent - lastLoggedProgress > fileSize / 5) {
-                        lastLoggedProgress = totalSent;
-                        int progress = (int)(totalSent * 100 / fileSize);
-                        logger.log(Logger.Level.INFO, "FileManager", "Send progress: " + progress + "%");
-                    }
-                }
-                dataOut.flush();
-                logger.log(Logger.Level.INFO, "FileManager", "File transfer complete: " + fileName);
-            }
-
-        } catch (IOException | NoSuchAlgorithmException e) {
+        } catch (IOException | SQLException e) {
             logger.log(Logger.Level.ERROR, "FileManager", "Failed to send file: " + fileName, e);
             throw new RuntimeException("Failed to send file: " + fileName, e);
+        }
+    }
+
+    private static class FileData {
+        byte[] content;
+        long fileSize;
+        byte[] checksum;
+
+        FileData(byte[] content, long fileSize, byte[] checksum) {
+            this.content = content;
+            this.fileSize = fileSize;
+            this.checksum = checksum;
+        }
+    }
+
+    private FileData getFileFromDatabase(String fileName) throws SQLException {
+        ConnectionPool pool = ConnectionPool.getInstance();
+        Connection conn = null;
+
+        try {
+            conn = pool.getConnection();
+
+            try (PreparedStatement pstmt = conn.prepareStatement(
+                    "SELECT content, file_size, checksum FROM files WHERE filename = ?")) {
+                pstmt.setString(1, fileName);
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        byte[] content = rs.getBytes("content");
+                        long fileSize = rs.getLong("file_size");
+                        byte[] checksum = rs.getBytes("checksum");
+
+                        return new FileData(content, fileSize, checksum);
+                    }
+                }
+            }
+
+            return null; // File not found
         } finally {
-            lock.readLock().unlock();
+            pool.releaseConnection(conn);
         }
     }
 
     public String listFiles() {
-        // Use read lock for listing files
-        lock.readLock().lock();
+        ConnectionPool pool = ConnectionPool.getInstance();
+        Connection conn = null;
+
         try {
-            File folder = new File(SHARED_DIR);
+            conn = pool.getConnection();
             StringBuilder sb = new StringBuilder();
             sb.append("Available files:\n");
-            File[] files = folder.listFiles();
-            if (files != null && files.length > 0) {
-                boolean hasRegularFiles = false;
-                for (File file : files) {
-                    if (file.isFile() && !file.getName().startsWith("temp_")) {
-                        hasRegularFiles = true;
-                        String displayName = file.getName();
-                        sb.append(" - ").append(displayName)
-                                .append(" (").append(file.length()).append(" bytes)")
+
+            try (PreparedStatement pstmt = conn.prepareStatement(
+                    "SELECT filename, file_size FROM files ORDER BY filename")) {
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    boolean hasFiles = false;
+
+                    while (rs.next()) {
+                        hasFiles = true;
+                        String fileName = rs.getString("filename");
+                        long fileSize = rs.getLong("file_size");
+
+                        sb.append(" - ").append(fileName)
+                                .append(" (").append(fileSize).append(" bytes)")
                                 .append("\n");
                     }
+
+                    if (!hasFiles) {
+                        sb.append("No files available.\n");
+                    }
                 }
-                if (!hasRegularFiles) {
-                    sb.append("No files available.\n");
-                }
-            } else {
-                sb.append("No files available.\n");
             }
+
             return sb.toString();
+        } catch (SQLException e) {
+            logger.log(Logger.Level.ERROR, "FileManager", "Failed to list files", e);
+            return "Error listing files: " + e.getMessage();
         } finally {
-            lock.readLock().unlock();
+            pool.releaseConnection(conn);
         }
     }
 
     /**
-     * Sanitizes a filename to prevent directory traversal attacks
+     * Sanitizes a filename to prevent SQL injection and other issues
      * @param filename The filename to sanitize
      * @return A sanitized filename
      */
     private String sanitizeFileName(String filename) {
         // Replace any path-like characters
         return filename.replaceAll("[\\\\/:*?\"<>|]", "_");
+    }
+
+    private byte[] calculateChecksum(byte[] data) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        return digest.digest(data);
     }
 
     private byte[] calculateChecksum(File file) throws IOException, NoSuchAlgorithmException {

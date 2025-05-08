@@ -2,7 +2,6 @@ import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.StringTokenizer;
-import java.io.File;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -19,6 +18,16 @@ public class ClientHandler implements Runnable {
     private volatile boolean running = true;
     private static final int BUFFER_SIZE = 32768; // Increased buffer size for better performance
     private static final int SOCKET_TIMEOUT = 120000; // 2 minute timeout
+
+    // Static initializer to verify database tables
+    static {
+        try {
+            // Make sure FileManager verifies database tables
+            fileManager.verifyDatabaseTables();
+        } catch (Exception e) {
+            logger.log(Logger.Level.ERROR, "ClientHandler", "Error during static initialization", e);
+        }
+    }
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
@@ -113,7 +122,7 @@ public class ClientHandler implements Runnable {
                                 dataOutputStream.flush();
 
                                 // Send explicit success response
-                                String successMessage = "Upload successful to server_files/.\n";
+                                String successMessage = "Upload successful to database.\n";
                                 writer.write(successMessage);
                                 writer.flush();
 
@@ -148,18 +157,6 @@ public class ClientHandler implements Runnable {
                             }
 
                             String downloadFilename = tokenizer.nextToken();
-
-                            File requestedFile = new File(FileManager.SHARED_DIR + downloadFilename);
-
-                            if (!requestedFile.exists() || !requestedFile.isFile()) {
-                                writer.write("ERROR: File '" + downloadFilename + "' not found on server.\n");
-                                writer.flush();
-
-                                // Send -1 as file size to indicate file not found
-                                dataOutputStream.writeLong(-1);
-                                dataOutputStream.flush();
-                                break;
-                            }
 
                             try {
                                 // Increase timeout during file transfer

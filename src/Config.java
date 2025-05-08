@@ -58,7 +58,7 @@ public class Config {
         properties.setProperty("server.port", "9000");
         properties.setProperty("server.max_threads", "50");
         properties.setProperty("files.directory", "server_files/");
-        properties.setProperty("db.url", "jdbc:sqlite:file_logs.db");
+        properties.setProperty("db.url", "jdbc:sqlite:file_storage.db"); // Updated database name
         properties.setProperty("server.host", "localhost");
         properties.setProperty("debug.mode", "false");
         properties.setProperty("buffer.size", "32768");
@@ -155,7 +155,7 @@ public class Config {
             return (String) propertyCache.get("db.url");
         }
 
-        String url = properties.getProperty("db.url", "jdbc:sqlite:file_logs.db");
+        String url = properties.getProperty("db.url", "jdbc:sqlite:file_storage.db"); // Updated database name
         propertyCache.put("db.url", url);
         return url;
     }
@@ -185,7 +185,7 @@ public class Config {
                 defaultProps.setProperty("server.port", "9000");
                 defaultProps.setProperty("server.max_threads", "50");
                 defaultProps.setProperty("files.directory", "server_files/");
-                defaultProps.setProperty("db.url", "jdbc:sqlite:file_logs.db");
+                defaultProps.setProperty("db.url", "jdbc:sqlite:file_storage.db"); // Updated database name
                 defaultProps.setProperty("server.host", "localhost");
                 defaultProps.setProperty("debug.mode", "false");
                 defaultProps.setProperty("buffer.size", "32768");
