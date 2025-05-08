@@ -1,0 +1,33 @@
+[2025-05-08 00:17:50] [INFO] [Logger] Logging system initialized
+[2025-05-08 00:17:50] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 00:17:50] [INFO] [MainServer] Initializing server...
+[2025-05-08 00:17:50] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 00:17:50] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 00:17:50] [INFO] [MainServer] Starting server on port 9000 with 5 core threads, 10 max threads
+[2025-05-08 00:17:50] [INFO] [MainServer] Server started successfully
+[2025-05-08 00:17:55] [INFO] [Logger] Logging system initialized
+[2025-05-08 00:17:55] [INFO] [Client] Starting client...
+[2025-05-08 00:17:55] [INFO] [MainServer] New connection accepted from: /127.0.0.1:53722 (Active connections: 1)
+[2025-05-08 00:17:55] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 00:17:55] [INFO] [FileManager] FileManager initialized
+[2025-05-08 00:17:55] [INFO] [FileManager] Verifying database tables
+[2025-05-08 00:17:55] [INFO] [FileManager] Database tables verified
+[2025-05-08 00:17:55] [INFO] [ClientHandler] New client connected: /127.0.0.1:53722
+[2025-05-08 00:17:58] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-08 00:17:58] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-08 00:18:01] [INFO] [Logger] Logging system initialized
+[2025-05-08 00:18:01] [INFO] [Client] Starting client...
+[2025-05-08 00:18:01] [INFO] [MainServer] New connection accepted from: /127.0.0.1:53726 (Active connections: 2)
+[2025-05-08 00:18:01] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 00:18:01] [INFO] [ClientHandler] New client connected: /127.0.0.1:53726
+[2025-05-08 00:18:04] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-08 00:18:04] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has joined the server. (excluding MOMO) to 1 clients
+[2025-05-08 00:18:08] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-08 00:18:10] [INFO] [ClientHandler] Mohan issued command: LOGS 10
+[2025-05-08 00:18:10] [INFO] [DBLogger] Initializing database logger - tables should be already created
+[2025-05-08 00:18:10] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-08 00:18:10] [INFO] [DBLogger] Retrieved 10 log entries
+[2025-05-08 00:20:03] [INFO] [Logger] Logging system shutting down
+[2025-05-08 00:20:03] [INFO] [MainServer] Server shutting down...
+[2025-05-08 00:20:03] [INFO] [Logger] Logging system shutting down
+[2025-05-08 00:20:03] [INFO] [Logger] Logging system shutting down

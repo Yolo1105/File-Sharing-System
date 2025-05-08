@@ -3,64 +3,58 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class DBLogger {
+    private static final Logger logger = Logger.getInstance();
     private static volatile boolean initialized = false;
     private static boolean initializing = false;
+
+    // Date format patterns
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    // Change this to include year and date in the display format
+    private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    // Error messages
+    private static final String ERR_INIT_FAILED = "Failed to initialize database logger";
+    private static final String ERR_LOG_FAILED = "Failed to log action";
+    private static final String ERR_LOGS_FAILED = "Failed to retrieve logs";
+    private static final String ERR_RESET_FAILED = "Failed to reset database";
 
     /**
      * Initializes the database and ensures the schema is correct
      */
-    private static synchronized void initializeDatabase() {
+    private static synchronized void initialize() {
         if (initialized || initializing) return;
 
         initializing = true;
-        System.out.println("[INIT] Initializing DBLogger...");
+        logger.log(Logger.Level.INFO, "DBLogger", "Initializing database logger - tables should be already created");
 
-        ConnectionPool pool = ConnectionPool.getInstance();
-        Connection conn = null;
-
+        // No need to create tables here anymore - ConnectionPool.initializeDatabaseSchema handles it
         try {
-            conn = pool.getConnection();
+            // Just verify the table exists as a sanity check
+            ConnectionPool pool = ConnectionPool.getInstance();
+            Connection conn = null;
 
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute("PRAGMA foreign_keys = ON");
-            }
-
-            boolean tableExists;
-            try (ResultSet rs = conn.getMetaData().getTables(null, null, "logs", null)) {
-                tableExists = rs.next();
-            }
-
-            if (!tableExists) {
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.executeUpdate("""
-                        CREATE TABLE logs (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            client TEXT NOT NULL,
-                            action TEXT NOT NULL,
-                            filename TEXT NOT NULL,
-                            timestamp TEXT NOT NULL
-                        )
-                    """);
-                    System.out.println("[INIT] Created logs table with correct schema");
-                }
-            }
-
-            initialized = true;
-            System.out.println("[INIT] Database logger initialized successfully");
-
-            // Now it's safe to use the Logger
             try {
-                Logger.getInstance().log(Logger.Level.INFO, "DBLogger", "Database logger initialized successfully");
-            } catch (Exception e) {
-                // If logger still has issues, just use console logging
-                System.out.println("[INFO] Database logger initialized successfully");
-            }
+                conn = pool.getConnection();
 
+                // Verify logs table exists
+                try (ResultSet rs = conn.getMetaData().getTables(null, null, "logs", null)) {
+                    if (!rs.next()) {
+                        logger.log(Logger.Level.WARNING, "DBLogger",
+                                "Logs table doesn't exist, tables may not be properly initialized");
+                        return;
+                    }
+                }
+
+                initialized = true;
+                logger.log(Logger.Level.INFO, "DBLogger", "Database logger initialized successfully");
+
+            } finally {
+                pool.releaseConnection(conn);
+            }
         } catch (SQLException e) {
-            System.err.println("[FATAL] Failed to initialize database: " + e.getMessage());
-            e.printStackTrace();
+            logger.log(Logger.Level.ERROR, "DBLogger", ERR_INIT_FAILED, e);
         } finally {
-            pool.releaseConnection(conn);
             initializing = false;
         }
     }
@@ -74,9 +68,10 @@ public class DBLogger {
     public static void log(String client, String action, String filename) {
         // Initialize if needed
         if (!initialized) {
-            initializeDatabase();
+            initialize();
         }
 
+        // Normalize client name
         if (client == null || client.trim().isEmpty()) {
             client = "Unknown";
         }
@@ -86,7 +81,10 @@ public class DBLogger {
             client = client.substring(0, client.indexOf("_"));
         }
 
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        // Generate current timestamp
+        String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
+
+        // Prepare database operation
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection conn = null;
 
@@ -100,23 +98,12 @@ public class DBLogger {
                 pstmt.setString(4, timestamp);
                 pstmt.executeUpdate();
 
-                // Log to regular logger if available
-                try {
-                    Logger.getInstance().log(Logger.Level.INFO, "DBLogger", "Logged: " + client + " " + action + " " + filename);
-                } catch (Exception e) {
-                    // Fall back to console
-                    System.out.println("[INFO] Logged: " + client + " " + action + " " + filename);
-                }
+                // Log successful operation
+                logger.log(Logger.Level.INFO, "DBLogger",
+                        "Logged: " + client + " " + action + " " + filename);
             }
         } catch (SQLException e) {
-            System.err.println("[ERROR] Failed to log action: " + e.getMessage());
-            try {
-                Logger.getInstance().log(Logger.Level.ERROR, "DBLogger", "Failed to log action: " + e.getMessage(), e);
-            } catch (Exception ex) {
-                // Logger issue, just use console
-                System.err.println("[ERROR] Failed to log action: " + e.getMessage());
-                e.printStackTrace();
-            }
+            logger.log(Logger.Level.ERROR, "DBLogger", ERR_LOG_FAILED, e);
         } finally {
             pool.releaseConnection(conn);
         }
@@ -128,12 +115,16 @@ public class DBLogger {
      * @return String representation of the logs
      */
     public static String getRecentLogs(int limit) {
+        // Initialize if needed
         if (!initialized) {
-            initializeDatabase();
+            initialize();
         }
 
+        // Enforce reasonable limits
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+
         StringBuilder result = new StringBuilder();
-        result.append("=== File Logs (Last ").append(limit).append(" Actions) ===\n");
+        result.append("=== File Logs (Last ").append(safeLimit).append(" Actions) ===\n");
 
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection conn = null;
@@ -143,7 +134,7 @@ public class DBLogger {
             try (PreparedStatement pstmt = conn.prepareStatement(
                     "SELECT * FROM logs ORDER BY timestamp DESC LIMIT ?")) {
 
-                pstmt.setInt(1, limit);
+                pstmt.setInt(1, safeLimit);
 
                 try (ResultSet rs = pstmt.executeQuery()) {
                     boolean hasLogs = false;
@@ -151,35 +142,37 @@ public class DBLogger {
                     while (rs.next()) {
                         hasLogs = true;
 
-                        // Get the timestamp from database
+                        // Get the values from database
                         String timestamp = rs.getString("timestamp");
+                        String client = rs.getString("client");
+                        String action = rs.getString("action");
+                        String filename = rs.getString("filename");
 
-                        // Parse timestamp and reformat to HH:mm
+                        // Parse timestamp and reformat to include year and date
                         try {
-                            LocalDateTime dateTime = LocalDateTime.parse(timestamp,
-                                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                            LocalDateTime dateTime = LocalDateTime.parse(timestamp, TIMESTAMP_FORMAT);
+                            String formattedTime = dateTime.format(DISPLAY_FORMAT);
 
-                            // Format just the hour:minute
-                            String timeOnly = dateTime.format(DateTimeFormatter.ofPattern("HH:mm"));
-
-                            // Get the client name without any suffix
-                            String client = rs.getString("client");
+                            // Clean up client name if needed
                             if (client.contains("_")) {
                                 client = client.substring(0, client.indexOf("_"));
                             }
 
-                            // Format the log entry as requested
-                            result.append("[").append(timeOnly).append("] ")
+                            // Format the log entry with year and date included
+                            result.append("[").append(formattedTime).append("] ")
                                     .append(client).append(" ")
-                                    .append(rs.getString("action")).append(": ")
-                                    .append(rs.getString("filename")).append("\n");
+                                    .append(action).append(": ")
+                                    .append(filename).append("\n");
+
                         } catch (Exception e) {
                             // If any error in formatting, fall back to original format
-                            result.append("[")
-                                    .append(timestamp).append("] ")
-                                    .append(rs.getString("client")).append(" ")
-                                    .append(rs.getString("action")).append(": ")
-                                    .append(rs.getString("filename")).append("\n");
+                            result.append("[").append(timestamp).append("] ")
+                                    .append(client).append(" ")
+                                    .append(action).append(": ")
+                                    .append(filename).append("\n");
+
+                            logger.log(Logger.Level.WARNING, "DBLogger",
+                                    "Error formatting log entry: " + e.getMessage());
                         }
                     }
 
@@ -188,15 +181,12 @@ public class DBLogger {
                     }
                 }
             }
+
+            logger.log(Logger.Level.INFO, "DBLogger", "Retrieved " + safeLimit + " log entries");
+
         } catch (SQLException e) {
-            result.append("ERROR: Failed to retrieve logs: ").append(e.getMessage()).append("\n");
-            try {
-                Logger.getInstance().log(Logger.Level.ERROR, "DBLogger", "Failed to retrieve logs: " + e.getMessage(), e);
-            } catch (Exception ex) {
-                // Logger issue, just use console
-                System.err.println("[ERROR] Failed to retrieve logs: " + e.getMessage());
-                e.printStackTrace();
-            }
+            logger.log(Logger.Level.ERROR, "DBLogger", ERR_LOGS_FAILED, e);
+            result.append("ERROR: ").append(ERR_LOGS_FAILED).append(": ").append(e.getMessage()).append("\n");
         } finally {
             pool.releaseConnection(conn);
         }
@@ -208,6 +198,8 @@ public class DBLogger {
      * Resets the database by dropping and recreating the logs table
      */
     public static void resetDatabase() {
+        logger.log(Logger.Level.WARNING, "DBLogger", "Resetting logs database table");
+
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection conn = null;
 
@@ -226,17 +218,10 @@ public class DBLogger {
                 """);
 
                 initialized = true;
-                Logger.getInstance().log(Logger.Level.INFO, "DBLogger", "Database reset successfully");
+                logger.log(Logger.Level.INFO, "DBLogger", "Database reset successfully");
             }
         } catch (SQLException e) {
-            System.err.println("[ERROR] Failed to reset database: " + e.getMessage());
-            try {
-                Logger.getInstance().log(Logger.Level.ERROR, "DBLogger", "Failed to reset database: " + e.getMessage(), e);
-            } catch (Exception ex) {
-                // Logger issue, just use console
-                System.err.println("[ERROR] Failed to reset database: " + e.getMessage());
-                e.printStackTrace();
-            }
+            logger.log(Logger.Level.ERROR, "DBLogger", ERR_RESET_FAILED, e);
         } finally {
             pool.releaseConnection(conn);
         }

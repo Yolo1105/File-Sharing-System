@@ -10,6 +10,14 @@ public class Config {
     // Cache for frequently accessed properties
     private static final ConcurrentHashMap<String, Object> propertyCache = new ConcurrentHashMap<>();
 
+    // Standardized constants for the application
+    private static final int DEFAULT_BUFFER_SIZE = 32768;
+    private static final int DEFAULT_SOCKET_TIMEOUT = 120000;
+    private static final int DEFAULT_SERVER_PORT = 9000;
+    private static final int DEFAULT_MAX_THREADS = 50;
+    private static final String DEFAULT_DB_URL = "jdbc:sqlite:file_storage.db";
+    private static final String DEFAULT_FILES_DIRECTORY = "server_files/";
+
     static {
         boolean loadedConfig = false;
 
@@ -51,18 +59,19 @@ public class Config {
         System.out.println("[CONFIG] Files directory: " + getFilesDirectory());
         System.out.println("[CONFIG] DB URL: " + getDbUrl());
         System.out.println("[CONFIG] Debug mode: " + getProperty("debug.mode", "false"));
-        System.out.println("[CONFIG] Buffer size: " + getProperty("buffer.size", "32768"));
+        System.out.println("[CONFIG] Buffer size: " + getBufferSize());
+        System.out.println("[CONFIG] Socket timeout: " + getSocketTimeout());
     }
 
     private static void setDefaults() {
-        properties.setProperty("server.port", "9000");
-        properties.setProperty("server.max_threads", "50");
-        properties.setProperty("files.directory", "server_files/");
-        properties.setProperty("db.url", "jdbc:sqlite:file_storage.db"); // Updated database name
+        properties.setProperty("server.port", String.valueOf(DEFAULT_SERVER_PORT));
+        properties.setProperty("server.max_threads", String.valueOf(DEFAULT_MAX_THREADS));
+        properties.setProperty("files.directory", DEFAULT_FILES_DIRECTORY);
+        properties.setProperty("db.url", DEFAULT_DB_URL);
         properties.setProperty("server.host", "localhost");
         properties.setProperty("debug.mode", "false");
-        properties.setProperty("buffer.size", "32768");
-        properties.setProperty("socket.timeout", "120000");
+        properties.setProperty("buffer.size", String.valueOf(DEFAULT_BUFFER_SIZE));
+        properties.setProperty("socket.timeout", String.valueOf(DEFAULT_SOCKET_TIMEOUT));
         System.out.println("[CONFIG] Default configuration set");
     }
 
@@ -71,7 +80,7 @@ public class Config {
      */
     private static void optimizeProperties() {
         // Ensure buffer sizes are power of 2 and not too small
-        int bufferSize = getIntProperty("buffer.size", 8192);
+        int bufferSize = getIntProperty("buffer.size", DEFAULT_BUFFER_SIZE);
         if (bufferSize < 8192 || (bufferSize & (bufferSize - 1)) != 0) {
             // Round up to nearest power of 2, minimum 8k
             int optimizedSize = 8192;
@@ -117,29 +126,81 @@ public class Config {
         }
     }
 
+    /**
+     * Gets a boolean property with default value
+     */
+    public static boolean getBooleanProperty(String key, boolean defaultValue) {
+        // Check cache first
+        if (propertyCache.containsKey(key)) {
+            Object value = propertyCache.get(key);
+            if (value instanceof Boolean) {
+                return (Boolean) value;
+            }
+        }
+
+        String value = properties.getProperty(key);
+        if (value == null) {
+            return defaultValue;
+        }
+
+        boolean result = Boolean.parseBoolean(value);
+        propertyCache.put(key, result);
+        return result;
+    }
+
+    /**
+     * Gets the server port from configuration
+     */
     public static int getServerPort() {
-        return getIntProperty("server.port", 9000);
+        return getIntProperty("server.port", DEFAULT_SERVER_PORT);
     }
 
+    /**
+     * Gets the maximum number of threads for the server
+     */
     public static int getMaxThreads() {
-        return getIntProperty("server.max_threads", 50);
+        return getIntProperty("server.max_threads", DEFAULT_MAX_THREADS);
     }
 
+    /**
+     * Gets the buffer size for I/O operations
+     */
     public static int getBufferSize() {
-        return getIntProperty("buffer.size", 32768);
+        return getIntProperty("buffer.size", DEFAULT_BUFFER_SIZE);
     }
 
+    /**
+     * Gets the socket timeout in milliseconds
+     */
     public static int getSocketTimeout() {
-        return getIntProperty("socket.timeout", 120000);
+        return getIntProperty("socket.timeout", DEFAULT_SOCKET_TIMEOUT);
     }
 
+    /**
+     * Gets the upload/download timeout (typically longer than regular timeout)
+     */
+    public static int getFileTransferTimeout() {
+        return getSocketTimeout() * 2; // Double the regular timeout for file transfers
+    }
+
+    /**
+     * Gets the core pool size for thread pool
+     */
+    public static int getCorePoolSize() {
+        int maxThreads = getMaxThreads();
+        return Math.max(5, maxThreads / 2);
+    }
+
+    /**
+     * Gets the directory for storing files
+     */
     public static String getFilesDirectory() {
         // Check cache first
         if (propertyCache.containsKey("files.directory")) {
             return (String) propertyCache.get("files.directory");
         }
 
-        String dir = properties.getProperty("files.directory", "server_files/");
+        String dir = properties.getProperty("files.directory", DEFAULT_FILES_DIRECTORY);
         // Ensure directory ends with file separator
         if (!dir.endsWith("/") && !dir.endsWith("\\")) {
             dir = dir + File.separator;
@@ -149,17 +210,23 @@ public class Config {
         return dir;
     }
 
+    /**
+     * Gets the database URL
+     */
     public static String getDbUrl() {
         // Check cache first
         if (propertyCache.containsKey("db.url")) {
             return (String) propertyCache.get("db.url");
         }
 
-        String url = properties.getProperty("db.url", "jdbc:sqlite:file_storage.db"); // Updated database name
+        String url = properties.getProperty("db.url", DEFAULT_DB_URL);
         propertyCache.put("db.url", url);
         return url;
     }
 
+    /**
+     * Gets a string property with default value
+     */
     public static String getProperty(String key, String defaultValue) {
         // Check cache first
         if (propertyCache.containsKey(key)) {
@@ -175,6 +242,44 @@ public class Config {
     }
 
     /**
+     * Gets the server host address
+     */
+    public static String getServerHost() {
+        return getProperty("server.host", "localhost");
+    }
+
+    /**
+     * Checks if debug mode is enabled
+     */
+    public static boolean isDebugMode() {
+        return getBooleanProperty("debug.mode", false);
+    }
+
+    /**
+     * Utility method to check if a client connection is a utility connection
+     * (for upload, download or verification operations)
+     */
+    public static boolean isUtilityConnection(String clientName) {
+        return clientName != null &&
+                (clientName.contains("_upload") ||
+                        clientName.contains("_download") ||
+                        clientName.contains("_verify"));
+    }
+
+    /**
+     * Protocol constants for client-server communication
+     */
+    public static final class Protocol {
+        public static final String CMD_UPLOAD = "UPLOAD";
+        public static final String CMD_DOWNLOAD = "DOWNLOAD";
+        public static final String CMD_LIST = "LIST";
+        public static final String CMD_LOGS = "LOGS";
+        public static final String RESPONSE_END_MARKER = "*END*";
+        public static final String CLIENT_ID_PREFIX = "CLIENT_ID ";
+        public static final String NOTIFICATION_PREFIX = "SERVER_NOTIFICATION:";
+    }
+
+    /**
      * Creates a config.properties file with optimized default values if it doesn't exist
      */
     public static void createDefaultConfigFile() {
@@ -182,14 +287,14 @@ public class Config {
         if (!configFile.exists()) {
             try {
                 Properties defaultProps = new Properties();
-                defaultProps.setProperty("server.port", "9000");
-                defaultProps.setProperty("server.max_threads", "50");
-                defaultProps.setProperty("files.directory", "server_files/");
-                defaultProps.setProperty("db.url", "jdbc:sqlite:file_storage.db"); // Updated database name
+                defaultProps.setProperty("server.port", String.valueOf(DEFAULT_SERVER_PORT));
+                defaultProps.setProperty("server.max_threads", String.valueOf(DEFAULT_MAX_THREADS));
+                defaultProps.setProperty("files.directory", DEFAULT_FILES_DIRECTORY);
+                defaultProps.setProperty("db.url", DEFAULT_DB_URL);
                 defaultProps.setProperty("server.host", "localhost");
                 defaultProps.setProperty("debug.mode", "false");
-                defaultProps.setProperty("buffer.size", "32768");
-                defaultProps.setProperty("socket.timeout", "120000");
+                defaultProps.setProperty("buffer.size", String.valueOf(DEFAULT_BUFFER_SIZE));
+                defaultProps.setProperty("socket.timeout", String.valueOf(DEFAULT_SOCKET_TIMEOUT));
 
                 try (java.io.FileOutputStream out = new java.io.FileOutputStream(configFile)) {
                     defaultProps.store(out, "Optimized configuration for File Sharing System");

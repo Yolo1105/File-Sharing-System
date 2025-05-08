@@ -1,6 +1,8 @@
 import java.io.*;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Broadcaster {
     private static final Broadcaster instance = new Broadcaster();
@@ -8,6 +10,20 @@ public class Broadcaster {
 
     // Maps client name to their writer stream
     private final Map<String, BufferedWriter> clientWriters = new ConcurrentHashMap<>();
+
+    // Message prefixes and formats
+    private static final String NOTIFICATION_PREFIX = Config.Protocol.NOTIFICATION_PREFIX;
+    private static final String JOIN_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s has joined the server.\n";
+    private static final String LEAVE_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s has left the server.\n";
+    private static final String UPLOAD_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s uploaded file: %s\n";
+    private static final String DOWNLOAD_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s downloaded file: %s\n";
+
+    // Log messages
+    private static final String LOG_SKIPPING_NOTIFICATION = "Skipping notification for utility connection: %s";
+    private static final String LOG_REGISTERED = "Registered client: %s";
+    private static final String LOG_UNREGISTERED = "Unregistered client: %s";
+    private static final String LOG_BROADCAST_RESULT = "Broadcast message: %s (excluding %s) to %d clients%s";
+    private static final String LOG_SEND_FAILED = "Failed to send message to %s: %s";
 
     private Broadcaster() {}
 
@@ -17,42 +33,47 @@ public class Broadcaster {
 
     /**
      * Registers a new client and notifies other clients
+     * @param clientName The name of the client to register
+     * @param writer The writer stream for the client
      */
     public void register(String clientName, BufferedWriter writer) {
         // Don't register clients with special suffixes (_upload, _download, _verify)
-        if (clientName.contains("_upload") || clientName.contains("_download") || clientName.contains("_verify")) {
-            logger.log(Logger.Level.INFO, "Broadcaster", "Skipping notification for utility connection: " + clientName);
+        if (Config.isUtilityConnection(clientName)) {
+            logger.log(Logger.Level.INFO, "Broadcaster",
+                    String.format(LOG_SKIPPING_NOTIFICATION, clientName));
             clientWriters.put(clientName, writer);
             return;
         }
 
         clientWriters.put(clientName, writer);
-        logger.log(Logger.Level.INFO, "Broadcaster", "Registered client: " + clientName);
+        logger.log(Logger.Level.INFO, "Broadcaster", String.format(LOG_REGISTERED, clientName));
 
         // Notify other clients about the new user with a clear notification format
-        broadcast("SERVER_NOTIFICATION: " + clientName + " has joined the server.\n", clientName);
+        broadcast(String.format(JOIN_MESSAGE_FORMAT, clientName), clientName);
     }
 
     /**
      * Unregisters a client when they disconnect
+     * @param clientName The name of the client to unregister
      */
     public void unregister(String clientName) {
         // Don't notify about utility connections
-        if (clientName.contains("_upload") || clientName.contains("_download") || clientName.contains("_verify")) {
+        if (Config.isUtilityConnection(clientName)) {
             clientWriters.remove(clientName);
             return;
         }
 
         if (clientWriters.remove(clientName) != null) {
-            logger.log(Logger.Level.INFO, "Broadcaster", "Unregistered client: " + clientName);
+            logger.log(Logger.Level.INFO, "Broadcaster", String.format(LOG_UNREGISTERED, clientName));
 
             // Notify other clients that a user has left
-            broadcast("SERVER_NOTIFICATION: " + clientName + " has left the server.\n", null);
+            broadcast(String.format(LEAVE_MESSAGE_FORMAT, clientName), null);
         }
     }
 
     /**
      * Broadcasts a message to all clients
+     * @param message The message to broadcast
      */
     public void broadcast(String message) {
         broadcast(message, null); // Broadcast to all clients
@@ -67,32 +88,40 @@ public class Broadcaster {
         int successCount = 0;
         int failureCount = 0;
 
-        // Create a copy of entries to avoid concurrent modification issues
-        for (Map.Entry<String, BufferedWriter> entry : clientWriters.entrySet()) {
+        // Get a snapshot of clients to avoid concurrent modification issues
+        List<Map.Entry<String, BufferedWriter>> clients = new ArrayList<>(clientWriters.entrySet());
+
+        for (Map.Entry<String, BufferedWriter> entry : clients) {
+            String clientName = entry.getKey();
+            BufferedWriter writer = entry.getValue();
+
             // Skip utility connections and the excluded client
-            if (entry.getKey().contains("_upload") || entry.getKey().contains("_download") ||
-                    entry.getKey().contains("_verify") ||
-                    (excludeClient != null && excludeClient.equals(entry.getKey()))) {
+            if (Config.isUtilityConnection(clientName) ||
+                    (excludeClient != null && excludeClient.equals(clientName))) {
                 continue;
             }
 
             try {
-                entry.getValue().write(message);
-                entry.getValue().flush();
+                writer.write(message);
+                writer.flush();
                 successCount++;
             } catch (IOException e) {
-                logger.log(Logger.Level.ERROR, "Broadcaster", "Failed to send message to " + entry.getKey() + ": " + e.getMessage());
+                logger.log(Logger.Level.ERROR, "Broadcaster",
+                        String.format(LOG_SEND_FAILED, clientName, e.getMessage()));
                 // Remove the client with failed connection
-                clientWriters.remove(entry.getKey());
+                clientWriters.remove(clientName);
                 failureCount++;
             }
         }
 
+        String failureInfo = failureCount > 0 ? ", " + failureCount + " failed deliveries" : "";
+
         logger.log(Logger.Level.INFO, "Broadcaster",
-                "Broadcast message: " + message.trim() +
-                        (excludeClient != null ? " (excluding " + excludeClient + ")" : "") +
-                        " to " + successCount + " clients" +
-                        (failureCount > 0 ? ", " + failureCount + " failed deliveries" : ""));
+                String.format(LOG_BROADCAST_RESULT,
+                        message.trim(),
+                        excludeClient != null ? excludeClient : "none",
+                        successCount,
+                        failureInfo));
     }
 
     /**
@@ -102,11 +131,11 @@ public class Broadcaster {
      */
     public void broadcastFileUpload(String uploaderName, String filename) {
         // Skip notifications for utility connections
-        if (uploaderName.contains("_upload") || uploaderName.contains("_download") || uploaderName.contains("_verify")) {
+        if (Config.isUtilityConnection(uploaderName)) {
             return;
         }
 
-        broadcast("SERVER_NOTIFICATION: " + uploaderName + " uploaded file: " + filename + "\n", null);
+        broadcast(String.format(UPLOAD_MESSAGE_FORMAT, uploaderName, filename), null);
     }
 
     /**
@@ -116,24 +145,55 @@ public class Broadcaster {
      */
     public void broadcastFileDownload(String downloaderName, String filename) {
         // Skip notifications for utility connections
-        if (downloaderName.contains("_upload") || downloaderName.contains("_download") || downloaderName.contains("_verify")) {
+        if (Config.isUtilityConnection(downloaderName)) {
             return;
         }
 
-        broadcast("SERVER_NOTIFICATION: " + downloaderName + " downloaded file: " + filename + "\n", null);
+        broadcast(String.format(DOWNLOAD_MESSAGE_FORMAT, downloaderName, filename), null);
     }
 
     /**
      * Gets the number of connected clients
-     * @return Number of connected clients
+     * @return Number of connected clients (excluding utility connections)
      */
     public int getConnectedClientsCount() {
         int count = 0;
         for (String key : clientWriters.keySet()) {
-            if (!key.contains("_upload") && !key.contains("_download") && !key.contains("_verify")) {
+            if (!Config.isUtilityConnection(key)) {
                 count++;
             }
         }
         return count;
+    }
+
+    /**
+     * Sends a direct message to a specific client
+     * @param clientName The name of the client to message
+     * @param message The message to send
+     * @return true if message was sent, false otherwise
+     */
+    public boolean sendDirectMessage(String clientName, String message) {
+        BufferedWriter writer = clientWriters.get(clientName);
+        if (writer != null) {
+            try {
+                writer.write(message);
+                writer.flush();
+                return true;
+            } catch (IOException e) {
+                logger.log(Logger.Level.ERROR, "Broadcaster",
+                        String.format(LOG_SEND_FAILED, clientName, e.getMessage()));
+                clientWriters.remove(clientName);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks if a client is currently connected
+     * @param clientName The name of the client to check
+     * @return true if client is connected, false otherwise
+     */
+    public boolean isClientConnected(String clientName) {
+        return clientWriters.containsKey(clientName);
     }
 }

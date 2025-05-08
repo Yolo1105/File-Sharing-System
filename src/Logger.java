@@ -4,61 +4,132 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Logger {
     public enum Level {
-        INFO, WARNING, ERROR, FATAL
+        DEBUG, INFO, WARNING, ERROR, FATAL;
+
+        public boolean isAtLeastAsImportantAs(Level other) {
+            return this.ordinal() >= other.ordinal();
+        }
     }
 
-    private static final String LOG_FILE = "server.log";
+    // Singleton instance
     private static final Logger instance = new Logger();
+
+    // File configuration
+    private static final String LOG_FILE = "server.log";
+    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    // Writer and queue for async logging
     private PrintWriter logWriter;
-    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private final BlockingQueue<String> logQueue = new LinkedBlockingQueue<>();
 
-    // Queue for asynchronous logging
-    private final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<>();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    // Logging thread and control flags
+    private Thread loggingThread;
+    private final AtomicBoolean running = new AtomicBoolean(true);
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
 
-    // Log level threshold - only log messages at this level or higher
+    // Configuration
     private Level logLevelThreshold = Level.INFO;
     private boolean debugMode = false;
-    private boolean initialized = false;
+    private boolean consoleOutput = true;
 
+    /**
+     * Private constructor for singleton pattern
+     */
     private Logger() {
         try {
-            // Initialize log file
-            logWriter = new PrintWriter(new FileWriter(LOG_FILE, true), true);
+            // Create the log file directory if it doesn't exist
+            java.io.File logDir = new java.io.File("logs");
+            if (!logDir.exists()) {
+                logDir.mkdirs();
+            }
 
-            // Start the log flushing task that runs every 1 second
-            scheduler.scheduleAtFixedRate(this::flushLogQueue, 1, 1, TimeUnit.SECONDS);
+            // Initialize log file with default in logs directory
+            String logFilePath = "logs/" + LOG_FILE;
+            logWriter = new PrintWriter(new FileWriter(logFilePath, true), true);
+
+            // Start the logging thread
+            startLoggingThread();
 
             // Mark as initialized
-            initialized = true;
-
-            // Add simple console logging indicating initialization
-            System.out.println("[LOGGER] Logging system initialized");
+            initialized.set(true);
 
             // Queue first log message
-            logQueue.add(formatLogEntry(Level.INFO, "Logger", "Logging system initialized"));
+            String initialMessage = formatLogEntry(Level.INFO, "Logger", "Logging system initialized");
+            logQueue.add(initialMessage);
+            System.out.println(initialMessage);
+
+            // Add shutdown hook to ensure clean shutdown
+            Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
         } catch (IOException e) {
             System.err.println("Failed to initialize logger: " + e.getMessage());
             e.printStackTrace();
         }
-
-        Runtime.getRuntime().addShutdownHook(new Thread(this::close));
     }
 
+    /**
+     * Get the singleton instance
+     */
     public static Logger getInstance() {
         return instance;
     }
 
     /**
-     * Sets the log level threshold
-     * @param level The minimum level to log
+     * Starts the logging thread to consume from the queue
+     */
+    private void startLoggingThread() {
+        loggingThread = new Thread(() -> {
+            try {
+                System.out.println("[INFO] [Logger] Logging thread started");
+
+                while (running.get() || !logQueue.isEmpty()) {
+                    try {
+                        // Process one message or wait if queue is empty
+                        String logEntry = logQueue.poll(500, java.util.concurrent.TimeUnit.MILLISECONDS);
+                        if (logEntry != null) {
+                            // Write to file
+                            synchronized (logWriter) {
+                                logWriter.println(logEntry);
+                                logWriter.flush();
+                            }
+                        }
+                    } catch (InterruptedException e) {
+                        // Thread was interrupted, check if we should exit
+                        Thread.currentThread().interrupt();
+                        if (!running.get()) {
+                            break;
+                        }
+                    } catch (Exception e) {
+                        // Log to console if there's an error writing to the log file
+                        System.err.println("Error in logging thread: " + e.getMessage());
+                    }
+                }
+
+                // Final flush and cleanup
+                synchronized (logWriter) {
+                    logWriter.flush();
+                }
+
+                System.out.println("[INFO] [Logger] Logging thread terminated");
+            } catch (Exception e) {
+                System.err.println("[FATAL] Fatal error in logging thread: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+
+        // Mark as daemon so it doesn't prevent JVM exit
+        loggingThread.setDaemon(true);
+        loggingThread.setName("LoggingThread");
+        loggingThread.start();
+    }
+
+    /**
+     * Sets the log level threshold. Only logs at this level or higher are recorded.
      */
     public void setLogLevel(Level level) {
         this.logLevelThreshold = level;
@@ -67,11 +138,18 @@ public class Logger {
 
     /**
      * Enables or disables debug mode
-     * @param debug True to enable debug mode, false to disable
      */
     public void setDebugMode(boolean debug) {
         this.debugMode = debug;
         log(Level.INFO, "Logger", "Debug mode set to: " + debug);
+    }
+
+    /**
+     * Enables or disables console output
+     */
+    public void setConsoleOutput(boolean enabled) {
+        this.consoleOutput = enabled;
+        log(Level.INFO, "Logger", "Console output set to: " + enabled);
     }
 
     /**
@@ -86,20 +164,24 @@ public class Logger {
      * Logs a message if its level is at or above the current threshold
      */
     public void log(Level level, String source, String message) {
-        // Skip logging if level is below threshold (e.g. skip INFO logs if threshold is ERROR)
-        if (level.ordinal() < logLevelThreshold.ordinal()) {
+        // Skip logging if not initialized or if level is below threshold
+        if (!initialized.get() || !level.isAtLeastAsImportantAs(logLevelThreshold)) {
+            // Special case: still show FATAL and ERROR on console even if logging is not initialized
+            if (level == Level.FATAL || level == Level.ERROR) {
+                System.err.println(formatLogEntry(level, source, message));
+            }
             return;
         }
 
         // Skip DEBUG logs if debug mode is disabled
-        if (message.startsWith("[DEBUG]") && !debugMode) {
+        if (level == Level.DEBUG && !debugMode) {
             return;
         }
 
         String logEntry = formatLogEntry(level, source, message);
 
-        // Write to console for important logs
-        if (level == Level.ERROR || level == Level.FATAL || level == Level.WARNING) {
+        // Write to console if enabled or for important logs
+        if (consoleOutput || level == Level.ERROR || level == Level.FATAL) {
             if (level == Level.ERROR || level == Level.FATAL) {
                 System.err.println(logEntry);
             } else {
@@ -111,11 +193,14 @@ public class Logger {
         logQueue.add(logEntry);
     }
 
+    /**
+     * Logs an exception with stack trace
+     */
     public void log(Level level, String source, String message, Throwable throwable) {
         log(level, source, message + ": " + throwable.getMessage());
 
-        // Only log stack traces for errors
-        if (level == Level.ERROR || level == Level.FATAL) {
+        // Only log stack traces for warnings, errors and fatal issues
+        if (level.isAtLeastAsImportantAs(Level.WARNING)) {
             // Use StringWriter for stack trace capture
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -125,60 +210,72 @@ public class Logger {
             logQueue.add(sw.toString());
 
             // Print stack trace to console for severe errors
-            throwable.printStackTrace(System.err);
+            if (level == Level.ERROR || level == Level.FATAL) {
+                throwable.printStackTrace(System.err);
+            }
         }
     }
 
     /**
-     * Flushes queued log entries to file
+     * Convenience method for static logging without requiring the instance directly
      */
-    private void flushLogQueue() {
-        if (logQueue.isEmpty() || !initialized) {
-            return;
-        }
-
-        try {
-            synchronized (logWriter) {
-                String entry;
-                while ((entry = logQueue.poll()) != null) {
-                    logWriter.println(entry);
-                }
-                logWriter.flush();
-            }
-        } catch (Exception e) {
-            // Log to console if there's an error writing to the log file
-            System.err.println("Error flushing log queue: " + e.getMessage());
-        }
+    public static void logStatic(Level level, String source, String message) {
+        getInstance().log(level, source, message);
     }
 
-    private void close() {
-        if (!initialized) {
+    /**
+     * Convenience method for static exception logging
+     */
+    public static void logStatic(Level level, String source, String message, Throwable throwable) {
+        getInstance().log(level, source, message, throwable);
+    }
+
+    /**
+     * Utility method to log message to both file and console regardless of current settings
+     */
+    public static void console(Level level, String source, String message) {
+        String formattedMsg = getInstance().formatLogEntry(level, source, message);
+        if (level == Level.ERROR || level == Level.FATAL) {
+            System.err.println(formattedMsg);
+        } else {
+            System.out.println(formattedMsg);
+        }
+        getInstance().logQueue.add(formattedMsg);
+    }
+
+    /**
+     * Shutdown the logging system
+     */
+    public void shutdown() {
+        if (!initialized.get()) {
             return;
         }
 
         try {
-            synchronized (logWriter) {
-                log(Level.INFO, "Logger", "Logging system shutting down");
+            // Log the shutdown
+            log(Level.INFO, "Logger", "Logging system shutting down");
 
-                // Shutdown scheduler
-                scheduler.shutdown();
+            // Signal the logging thread to stop after processing remaining entries
+            running.set(false);
+
+            // Wait for the logging thread to finish (with timeout)
+            if (loggingThread != null && loggingThread.isAlive()) {
                 try {
-                    if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                        scheduler.shutdownNow();
-                    }
+                    loggingThread.join(5000); // 5 second timeout
                 } catch (InterruptedException e) {
-                    scheduler.shutdownNow();
                     Thread.currentThread().interrupt();
                 }
+            }
 
-                // Flush any remaining logs
-                flushLogQueue();
-
-                // Close writer
+            // Final sync flush of any remaining entries
+            synchronized (logWriter) {
+                logWriter.flush();
                 logWriter.close();
             }
         } catch (Exception e) {
             System.err.println("Error closing logger: " + e.getMessage());
+        } finally {
+            initialized.set(false);
         }
     }
 }

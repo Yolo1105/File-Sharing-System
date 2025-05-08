@@ -2,90 +2,115 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.sql.Connection;
-import java.sql.Statement;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainServer {
     private static final Logger logger = Logger.getInstance();
     private static ServerSocket serverSocket;
-    private static ExecutorService pool;
+    private static ExecutorService threadPool;
     private static volatile boolean running = true;
 
+    // Error messages
+    private static final String ERR_START_SERVER = "Could not start server on port";
+    private static final String ERR_ACCEPT_CONNECTION = "Error accepting client connection";
+    private static final String ERR_CLOSE_SOCKET = "Error closing server socket";
+    private static final String ERR_THREAD_POOL = "Thread pool did not terminate";
+
+    // Info messages
+    private static final String INFO_STARTING = "Starting server on port %d with %d core threads, %d max threads";
+    private static final String INFO_STARTED = "Server started successfully";
+    private static final String INFO_SHUTDOWN = "Server shutting down...";
+    private static final String INFO_SHUTDOWN_COMPLETE = "Server shutdown complete";
+    private static final String INFO_NEW_CONNECTION = "New connection accepted from: %s (Active connections: %d)";
+    private static final String INFO_CONNECTION_CLOSED = "Connection closed. Active connections: %d";
+
     // Track number of active connections
-    private static int activeConnections = 0;
+    private static final AtomicInteger activeConnections = new AtomicInteger(0);
 
     public static void main(String[] args) {
-        int port = Config.getServerPort();
-
-        // Get max threads from config, but use a higher default if not specified
-        String maxThreadsStr = Config.getProperty("server.max_threads", "50");
-        int maxThreadsInt = Integer.parseInt(maxThreadsStr);
-
-        // Set core pool size to a lower value than max to conserve resources
-        int corePoolSize = Math.max(5, maxThreadsInt / 2);
-
-        // Initialize database tables AFTER logger is fully initialized
-        logger.log(Logger.Level.INFO, "MainServer", "Initializing database...");
         try {
-            initializeDatabase();
-        } catch (Exception e) {
-            logger.log(Logger.Level.FATAL, "MainServer", "Failed to initialize database: " + e.getMessage(), e);
-            System.exit(1);
-        }
+            // Print startup message
+            System.out.println("[INFO] [MainServer] Initializing server...");
 
-        // Create an improved thread pool with a queue
-        pool = new ThreadPoolExecutor(
-                corePoolSize,                  // Core pool size
-                maxThreadsInt,                 // Maximum pool size
-                60L, TimeUnit.SECONDS,         // Keep alive time for idle threads
-                new LinkedBlockingQueue<>(100), // Queue for waiting tasks
-                Executors.defaultThreadFactory(),
-                new ThreadPoolExecutor.CallerRunsPolicy() // If queue is full, caller thread executes the task
-        );
+            int port = Config.getServerPort();
+            int maxThreads = Config.getMaxThreads();
+            int corePoolSize = Config.getCorePoolSize();
 
-        logger.log(Logger.Level.INFO, "MainServer",
-                "Starting server on port " + port + " with " + corePoolSize +
-                        " core threads, " + maxThreadsInt + " max threads");
+            // Initialize the logging system first
+            if (logger != null) {
+                logger.setLogLevel(Config.isDebugMode() ? Logger.Level.DEBUG : Logger.Level.INFO);
+                logger.log(Logger.Level.INFO, "MainServer", "Initializing server...");
+            }
 
-        // Add shutdown hook for graceful shutdown
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown()));
+            // Create directories if they don't exist
+            createRequiredDirectories();
 
-        try {
+            // Initialize database schema through the connection pool - use try-catch to handle initialization errors
+            try {
+                ConnectionPool.initializeDatabaseSchema();
+            } catch (Exception e) {
+                System.err.println("[FATAL] Failed to initialize database schema: " + e.getMessage());
+                e.printStackTrace();
+                System.exit(1);
+            }
+
+            // Create an improved thread pool with a queue
+            threadPool = new ThreadPoolExecutor(
+                    corePoolSize,                    // Core pool size
+                    maxThreads,                      // Maximum pool size
+                    60L, TimeUnit.SECONDS,           // Keep alive time for idle threads
+                    new LinkedBlockingQueue<>(100),  // Queue for waiting tasks
+                    Executors.defaultThreadFactory(),
+                    new ThreadPoolExecutor.CallerRunsPolicy() // If queue is full, caller thread executes the task
+            );
+
+            System.out.println(String.format(INFO_STARTING, port, corePoolSize, maxThreads));
+            if (logger != null) {
+                logger.log(Logger.Level.INFO, "MainServer",
+                        String.format(INFO_STARTING, port, corePoolSize, maxThreads));
+            }
+
+            // Add shutdown hook for graceful shutdown
+            Runtime.getRuntime().addShutdownHook(new Thread(MainServer::shutdown));
+
+            // Create the server socket and start accepting connections
             serverSocket = new ServerSocket(port);
             // Set a timeout so we can check if we need to shut down
             serverSocket.setSoTimeout(1000); // 1 second timeout
 
-            logger.log(Logger.Level.INFO, "MainServer", "Server started successfully");
+            System.out.println("[INFO] [MainServer] " + INFO_STARTED);
+            if (logger != null) {
+                logger.log(Logger.Level.INFO, "MainServer", INFO_STARTED);
+            }
 
             while (running) {
                 try {
                     Socket clientSocket = serverSocket.accept();
 
-                    // Log active connection count
-                    synchronized (MainServer.class) {
-                        activeConnections++;
+                    // Track connection and submit to thread pool
+                    int currentConnections = activeConnections.incrementAndGet();
+                    System.out.println(String.format(INFO_NEW_CONNECTION,
+                            clientSocket.getRemoteSocketAddress(), currentConnections));
+                    if (logger != null) {
                         logger.log(Logger.Level.INFO, "MainServer",
-                                "New connection accepted from: " + clientSocket.getRemoteSocketAddress() +
-                                        " (Active connections: " + activeConnections + ")");
+                                String.format(INFO_NEW_CONNECTION,
+                                        clientSocket.getRemoteSocketAddress(), currentConnections));
                     }
 
-                    pool.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                new ClientHandler(clientSocket).run();
-                            } finally {
-                                // Decrement connection count when client handler finishes
-                                synchronized (MainServer.class) {
-                                    activeConnections--;
-                                    logger.log(Logger.Level.INFO, "MainServer",
-                                            "Connection closed. Active connections: " + activeConnections);
-                                }
+                    threadPool.execute(() -> {
+                        try {
+                            new ClientHandler(clientSocket).run();
+                        } finally {
+                            // Decrement connection count when client handler finishes
+                            int remaining = activeConnections.decrementAndGet();
+                            if (logger != null) {
+                                logger.log(Logger.Level.INFO, "MainServer",
+                                        String.format(INFO_CONNECTION_CLOSED, remaining));
                             }
                         }
                     });
@@ -93,12 +118,25 @@ public class MainServer {
                     // This is normal - it allows us to periodically check if we should shut down
                 } catch (IOException e) {
                     if (running) {
-                        logger.log(Logger.Level.ERROR, "MainServer", "Error accepting client connection", e);
+                        System.err.println("[ERROR] " + ERR_ACCEPT_CONNECTION + ": " + e.getMessage());
+                        if (logger != null) {
+                            logger.log(Logger.Level.ERROR, "MainServer", ERR_ACCEPT_CONNECTION, e);
+                        }
                     }
                 }
             }
         } catch (IOException e) {
-            logger.log(Logger.Level.FATAL, "MainServer", "Could not start server on port " + port, e);
+            int port = Config.getServerPort();
+            System.err.println("[FATAL] " + ERR_START_SERVER + " " + port + ": " + e.getMessage());
+            e.printStackTrace();
+            if (logger != null) {
+                logger.log(Logger.Level.FATAL, "MainServer", ERR_START_SERVER + " " + port, e);
+            }
+            System.exit(1);
+        } catch (Exception e) {
+            // Catch any other startup errors
+            System.err.println("[FATAL] Unexpected error during server startup: " + e.getMessage());
+            e.printStackTrace();
             System.exit(1);
         } finally {
             shutdown();
@@ -106,43 +144,44 @@ public class MainServer {
     }
 
     /**
-     * Initializes required database tables for file storage
+     * Creates required directories for server operation
      */
-    private static void initializeDatabase() {
-        ConnectionPool pool = ConnectionPool.getInstance();
-        Connection conn = null;
+    private static void createRequiredDirectories() {
+        // Create server files directory
+        java.io.File serverDir = new java.io.File(Config.getFilesDirectory());
+        if (!serverDir.exists()) {
+            boolean created = serverDir.mkdirs();
+            System.out.println("[INFO] Created server files directory: " + created);
+        }
 
-        try {
-            conn = pool.getConnection();
+        // Create client files directory
+        java.io.File clientDir = new java.io.File("client_files");
+        if (!clientDir.exists()) {
+            boolean created = clientDir.mkdirs();
+            System.out.println("[INFO] Created client files directory: " + created);
+        }
 
-            try (Statement stmt = conn.createStatement()) {
-                // Create files table if it doesn't exist
-                stmt.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS files (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        filename TEXT NOT NULL UNIQUE,
-                        content BLOB NOT NULL,
-                        file_size INTEGER NOT NULL,
-                        checksum BLOB NOT NULL,
-                        upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """);
-
-                logger.log(Logger.Level.INFO, "MainServer", "Database file storage initialized");
-            }
-        } catch (Exception e) {
-            logger.log(Logger.Level.FATAL, "MainServer", "Failed to initialize database tables", e);
-            throw new RuntimeException("Failed to initialize database", e);
-        } finally {
-            pool.releaseConnection(conn);
+        // Create downloads directory
+        java.io.File downloadsDir = new java.io.File("downloads");
+        if (!downloadsDir.exists()) {
+            boolean created = downloadsDir.mkdirs();
+            System.out.println("[INFO] Created downloads directory: " + created);
         }
     }
 
     /**
-     * Shutdowns the server gracefully
+     * Shuts down the server gracefully
      */
     private static void shutdown() {
-        logger.log(Logger.Level.INFO, "MainServer", "Server shutting down...");
+        System.out.println("[INFO] " + INFO_SHUTDOWN);
+        if (logger != null) {
+            logger.log(Logger.Level.INFO, "MainServer", INFO_SHUTDOWN);
+        }
+
+        // Prevent multiple shutdown attempts
+        if (!running) {
+            return;
+        }
 
         // Mark as not running
         running = false;
@@ -152,35 +191,47 @@ public class MainServer {
             try {
                 serverSocket.close();
             } catch (IOException e) {
-                logger.log(Logger.Level.ERROR, "MainServer", "Error closing server socket", e);
+                System.err.println("[ERROR] " + ERR_CLOSE_SOCKET + ": " + e.getMessage());
+                if (logger != null) {
+                    logger.log(Logger.Level.ERROR, "MainServer", ERR_CLOSE_SOCKET, e);
+                }
             }
         }
 
         // Shutdown thread pool
-        if (pool != null && !pool.isShutdown()) {
-            pool.shutdown();
+        if (threadPool != null && !threadPool.isShutdown()) {
+            threadPool.shutdown();
             try {
                 // Wait for existing tasks to terminate
-                if (!pool.awaitTermination(30, TimeUnit.SECONDS)) {
+                if (!threadPool.awaitTermination(30, TimeUnit.SECONDS)) {
                     // Force shutdown if still executing after timeout
-                    pool.shutdownNow();
-                    if (!pool.awaitTermination(15, TimeUnit.SECONDS)) {
-                        logger.log(Logger.Level.ERROR, "MainServer", "Thread pool did not terminate");
+                    threadPool.shutdownNow();
+                    if (!threadPool.awaitTermination(15, TimeUnit.SECONDS)) {
+                        System.err.println("[ERROR] " + ERR_THREAD_POOL);
+                        if (logger != null) {
+                            logger.log(Logger.Level.ERROR, "MainServer", ERR_THREAD_POOL);
+                        }
                     }
                 }
             } catch (InterruptedException e) {
                 // (Re-)Cancel if current thread also interrupted
-                pool.shutdownNow();
+                threadPool.shutdownNow();
                 // Preserve interrupt status
                 Thread.currentThread().interrupt();
             }
         }
 
-        logger.log(Logger.Level.INFO, "MainServer", "Server shutdown complete");
+        System.out.println("[INFO] " + INFO_SHUTDOWN_COMPLETE);
+        if (logger != null) {
+            logger.log(Logger.Level.INFO, "MainServer", INFO_SHUTDOWN_COMPLETE);
+        }
     }
 
-    // Method to get current active connections (can be useful for monitoring)
-    public static synchronized int getActiveConnections() {
-        return activeConnections;
+    /**
+     * Gets the current active connection count
+     * @return Number of active connections
+     */
+    public static int getActiveConnections() {
+        return activeConnections.get();
     }
 }

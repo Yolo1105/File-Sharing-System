@@ -1,6 +1,8 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
@@ -8,15 +10,18 @@ import java.util.concurrent.TimeUnit;
 
 public class ConnectionPool {
     private static final ConnectionPool instance = new ConnectionPool();
+    // Initialize logger as static to avoid NPE
+    private static final Logger logger = Logger.getInstance();
     private final String dbUrl;
     private final List<Connection> connections;
     private final Semaphore semaphore;
     private final int MAX_CONNECTIONS = 10;
     private final int CONNECTION_TIMEOUT_SECONDS = 30;
     private boolean initialized = false;
+    private boolean databaseSchemaInitialized = false;
 
     private ConnectionPool() {
-        // First, print initialization message to console for debugging
+        // Use System.out for initialization to avoid circular dependency with Logger
         System.out.println("[INIT] Initializing ConnectionPool with database URL: " + Config.getDbUrl());
 
         dbUrl = Config.getDbUrl();
@@ -26,7 +31,6 @@ public class ConnectionPool {
         try {
             // Initialize connections lazily when first requested
             // This avoids circular dependency issues during startup
-            // We'll create the first connection in getConnection()
             System.out.println("[INIT] ConnectionPool initialized without connections. Will create on demand.");
 
             // Add shutdown hook to close connections
@@ -43,6 +47,113 @@ public class ConnectionPool {
         return instance;
     }
 
+    /**
+     * Initializes the database schema - tables, indices, etc.
+     * This should be called once at application startup
+     */
+    public static synchronized void initializeDatabaseSchema() {
+        ConnectionPool pool = getInstance();
+
+        // Skip if already initialized
+        if (pool.databaseSchemaInitialized) {
+            System.out.println("[INFO] Database schema already initialized, skipping");
+            return;
+        }
+
+        System.out.println("[INFO] Initializing database schema...");
+        Connection conn = null;
+
+        try {
+            conn = pool.getConnection();
+
+            // Enable foreign keys for SQLite
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("PRAGMA foreign_keys = ON");
+            }
+
+            // Initialize all required tables
+            createFilesTable(conn);
+            createLogsTable(conn);
+
+            pool.databaseSchemaInitialized = true;
+            System.out.println("[INFO] Database schema initialized successfully");
+
+            // Now that schema is initialized, we can safely log
+            try {
+                if (logger != null) {
+                    logger.log(Logger.Level.INFO, "ConnectionPool", "Database schema initialized successfully");
+                }
+            } catch (Exception e) {
+                System.err.println("[ERROR] Failed to log database initialization: " + e.getMessage());
+            }
+
+        } catch (SQLException e) {
+            System.err.println("[FATAL] Failed to initialize database schema: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to initialize database schema", e);
+        } finally {
+            pool.releaseConnection(conn);
+        }
+    }
+
+    /**
+     * Creates the files table if it doesn't exist
+     */
+    private static void createFilesTable(Connection conn) throws SQLException {
+        boolean tableExists = tableExists(conn, "files");
+
+        if (!tableExists) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("""
+                    CREATE TABLE files (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        filename TEXT NOT NULL UNIQUE,
+                        content BLOB NOT NULL,
+                        file_size INTEGER NOT NULL,
+                        checksum BLOB NOT NULL,
+                        upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """);
+                System.out.println("[INFO] Created files table with schema");
+            }
+        } else {
+            System.out.println("[INFO] Files table already exists");
+        }
+    }
+
+    /**
+     * Creates the logs table if it doesn't exist
+     */
+    private static void createLogsTable(Connection conn) throws SQLException {
+        boolean tableExists = tableExists(conn, "logs");
+
+        if (!tableExists) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("""
+                    CREATE TABLE logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        client TEXT NOT NULL,
+                        action TEXT NOT NULL,
+                        filename TEXT NOT NULL,
+                        timestamp TEXT NOT NULL
+                    )
+                """);
+                System.out.println("[INFO] Created logs table with schema");
+            }
+        } else {
+            System.out.println("[INFO] Logs table already exists");
+        }
+    }
+
+    /**
+     * Checks if a table exists in the database
+     */
+    private static boolean tableExists(Connection conn, String tableName) throws SQLException {
+        try (ResultSet rs = conn.getMetaData().getTables(null, null, tableName, null)) {
+            return rs.next();
+        }
+    }
+
     private synchronized void initializeIfNeeded() {
         if (initialized) return;
 
@@ -52,13 +163,15 @@ public class ConnectionPool {
                 connections.add(createConnection());
             }
 
-            System.out.println("[INIT] Created initial database connections");
+            System.out.println("[INFO] Created initial database connections");
             initialized = true;
 
-            // Now that it's safe, log the initialization through the Logger
+            // Now that connections are initialized, we can safely log using Logger
             try {
-                Logger.getInstance().log(Logger.Level.INFO, "ConnectionPool",
-                        "Connection pool initialized with " + connections.size() + " initial connections");
+                if (logger != null) {
+                    logger.log(Logger.Level.INFO, "ConnectionPool",
+                            "Connection pool initialized with " + connections.size() + " initial connections");
+                }
             } catch (Exception e) {
                 // If logger still has issues, just use console
                 System.out.println("[INFO] Connection pool initialized with " + connections.size() + " initial connections");
