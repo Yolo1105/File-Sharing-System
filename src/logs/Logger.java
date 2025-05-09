@@ -134,17 +134,17 @@ public class Logger {
 
     public void setLogLevel(Level level) {
         this.logLevelThreshold = level;
-        log(Level.INFO, "Logger", "Log level set to: " + level);
+        log(Level.INFO, "Logger", String.format("Log level set to: %s", level));
     }
 
     public void setDebugMode(boolean debug) {
         this.debugMode = debug;
-        log(Level.INFO, "Logger", "Debug mode set to: " + debug);
+        log(Level.INFO, "Logger", String.format("Debug mode set to: %s", debug));
     }
 
     public void setConsoleOutput(boolean enabled) {
         this.consoleOutput = enabled;
-        log(Level.INFO, "Logger", "Console output set to: " + enabled);
+        log(Level.INFO, "Logger", String.format("Console output set to: %s", enabled));
     }
 
     private String formatLogEntry(Level level, String source, String message) {
@@ -183,7 +183,7 @@ public class Logger {
     }
 
     public void log(Level level, String source, String message, Throwable throwable) {
-        log(level, source, message + ": " + throwable.getMessage());
+        log(level, source, String.format("%s: %s", message, throwable.getMessage()));
 
         // Only log stack traces for warnings, errors and fatal issues
         if (level.isAtLeastAsImportantAs(Level.WARNING)) {
@@ -202,24 +202,29 @@ public class Logger {
         }
     }
 
-    public static void logStatic(Level level, String source, String message) {
-        getInstance().log(level, source, message);
+    // Static convenience methods
+    public static void logInfo(String source, String message) {
+        getInstance().log(Level.INFO, source, message);
     }
 
-
-    public static void logStatic(Level level, String source, String message, Throwable throwable) {
-        getInstance().log(level, source, message, throwable);
+    public static void logWarning(String source, String message) {
+        getInstance().log(Level.WARNING, source, message);
     }
 
-    @Deprecated
-    public static void console(Level level, String source, String message) {
-        String formattedMsg = getInstance().formatLogEntry(level, source, message);
-        if (level == Level.ERROR || level == Level.FATAL) {
-            System.err.println(formattedMsg);
-        } else {
-            System.out.println(formattedMsg);
-        }
-        getInstance().logQueue.add(formattedMsg);
+    public static void logError(String source, String message) {
+        getInstance().log(Level.ERROR, source, message);
+    }
+
+    public static void logError(String source, String message, Throwable throwable) {
+        getInstance().log(Level.ERROR, source, message, throwable);
+    }
+
+    public static void logDebug(String source, String message) {
+        getInstance().log(Level.DEBUG, source, message);
+    }
+
+    public static void logFatal(String source, String message, Throwable throwable) {
+        getInstance().log(Level.FATAL, source, message, throwable);
     }
 
     public void shutdown() {

@@ -22,13 +22,12 @@ public class Client {
     private static final int BUFFER_SIZE = Config.getBufferSize();
     private static final int SOCKET_TIMEOUT = Config.getSocketTimeout();
     private static final int FILE_TRANSFER_TIMEOUT = Config.getFileTransferTimeout();
-
-    // Maximum file size (10MB)
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+    private static final long MAX_FILE_SIZE = Config.getMaxFileSize();
 
     // Command constants from Config
     private static final String CMD_UPLOAD = Config.Protocol.CMD_UPLOAD;
     private static final String CMD_DOWNLOAD = Config.Protocol.CMD_DOWNLOAD;
+    private static final String CMD_DELETE = Config.Protocol.CMD_DELETE;
     private static final String CMD_LIST = Config.Protocol.CMD_LIST;
     private static final String CMD_LOGS = Config.Protocol.CMD_LOGS;
     private static final String CLIENT_ID_PREFIX = Config.Protocol.CLIENT_ID_PREFIX;
@@ -52,7 +51,8 @@ public class Client {
     private static final String ERR_CORRUPTED = "Downloaded file is corrupted. Checksum verification failed.";
     private static final String ERR_SAVE_FAILED = "Failed to save downloaded file";
     private static final String ERR_SERVER_TIMEOUT = "Server response timeout. Try again or check server connection.";
-    private static final String ERR_INVALID_COMMAND = "Invalid command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST, LOGS [count]";
+    private static final String ERR_INVALID_COMMAND = "Invalid command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, DELETE <filename>, LIST, LOGS [count]";
+    private static final String ERR_DELETE_FAILED = "ERROR: Delete failed: %s";
 
     // Info messages
     private static final String INFO_COMMAND_USAGE = "Usage: %s <filepath> or %s \"<filepath with spaces>\"";
@@ -68,48 +68,46 @@ public class Client {
     private static final String INFO_REQUEST_LIST = "Requesting file list from server...";
     private static final String INFO_REQUEST_LOGS = "Requesting %d recent logs from server...";
     private static final String SUCCESS_UPLOADED = "File '%s' was successfully uploaded to the server database.";
+    private static final String INFO_DELETE_PROCESSING = "Processing delete request for: %s";
+    private static final String SUCCESS_DELETED = "File '%s' was successfully deleted from the server.";
+    private static final String CONNECTION_CLOSED = "Connection to server has been closed. Press Enter to exit.";
 
     private static final String PROMPT = "> ";
     private static final String DOWNLOADS_DIR = "downloads/";
+    private static volatile boolean connectionActive = true;
 
     public static void main(String[] args) {
         logger.log(Logger.Level.INFO, "Client", INFO_STARTING);
 
         String serverHost = Config.getServerHost();
         int serverPort = Config.getServerPort();
+        Socket socket = null;
 
-        try (Socket socket = new Socket(serverHost, serverPort)) {
-            // Configure socket for better stability
+        try {
+            socket = new Socket(serverHost, serverPort);
             SocketHandler.configureStandardSocket(socket);
 
             System.out.println(String.format(INFO_CONNECTED, serverHost, serverPort));
             logger.log(Logger.Level.INFO, "Client", String.format(INFO_CONNECTED, serverHost, serverPort));
 
-            // Set up communication streams
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
             BufferedWriter writer = new BufferedWriter(
                     new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
 
-            // Read welcome message
             String welcomeMessage = reader.readLine();
             System.out.println(welcomeMessage);
 
-            // Get client name from user
             Scanner scanner = new Scanner(System.in);
             System.out.print("Enter your client name: ");
             String clientName = scanner.nextLine().trim();
             writer.write(CLIENT_ID_PREFIX + clientName + "\n");
             writer.flush();
 
-            // Read server response with available commands
             String response = reader.readLine();
             System.out.println(response);
 
-            // Start notification listener thread
-            Thread notificationThread = startNotificationListener(reader);
-
-            // Main command loop
+            Thread notificationThread = startNotificationListener(reader, socket);
             processUserCommands(scanner, writer, reader, serverHost, serverPort, clientName, socket);
 
         } catch (SocketTimeoutException e) {
@@ -122,36 +120,81 @@ public class Client {
             logger.log(Logger.Level.FATAL, "Client", "Connection error", e);
             System.out.println(String.format(ERR_CONNECTION_ERROR, e.getMessage()));
             e.printStackTrace();
+        } finally {
+            connectionActive = false;
+            if (socket != null && !socket.isClosed()) {
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    // Ignore close errors
+                }
+            }
+            System.out.println(CONNECTION_CLOSED);
+            try {
+                System.in.read();
+            } catch (IOException e) {
+                // Ignore read errors
+            }
         }
     }
 
-    private static Thread startNotificationListener(BufferedReader reader) {
+    private static Thread startNotificationListener(BufferedReader reader, final Socket socket) {
         Thread notificationThread = new Thread(() -> {
             try {
-                while (!Thread.currentThread().isInterrupted()) {
-                    // Check if there's data available to read
-                    if (reader.ready()) {
-                        String notification = reader.readLine();
-                        if (notification != null && notification.startsWith(NOTIFICATION_PREFIX)) {
-                            // Clear the current line and print the notification
-                            System.out.print("\r");  // Carriage return to start of line
-                            System.out.println("\n[NOTIFICATION]" +
-                                    notification.substring(NOTIFICATION_PREFIX.length()).trim());
-                            System.out.print(PROMPT);  // Reprint the prompt
+                while (connectionActive && !Thread.currentThread().isInterrupted()) {
+                    try {
+                        if (!socket.isConnected() || socket.isClosed()) {
+                            System.out.println("\r\n" + CONNECTION_CLOSED);
+                            connectionActive = false;
+                            break;
                         }
+
+                        if (reader.ready()) {
+                            String notification = reader.readLine();
+                            if (notification == null) {
+                                System.out.println("\r\n" + CONNECTION_CLOSED);
+                                connectionActive = false;
+                                break;
+                            }
+
+                            if (notification.startsWith(NOTIFICATION_PREFIX)) {
+                                System.out.print("\r");
+                                System.out.println("\n[NOTIFICATION]" +
+                                        notification.substring(NOTIFICATION_PREFIX.length()).trim());
+                                System.out.print(PROMPT);
+                            }
+                        }
+
+                        // Check connection status
+                        try {
+                            socket.setSendBufferSize(socket.getSendBufferSize());
+                        } catch (SocketException se) {
+                            System.out.println("\r\n" + CONNECTION_CLOSED);
+                            connectionActive = false;
+                            break;
+                        }
+
+                        Thread.sleep(200);
+                    } catch (SocketException e) {
+                        System.out.println("\r\n" + CONNECTION_CLOSED);
+                        connectionActive = false;
+                        break;
+                    } catch (IOException e) {
+                        if (!connectionActive) {
+                            break;
+                        }
+                        System.out.println("\r\nConnection error: " + e.getMessage());
+                        connectionActive = false;
+                        break;
                     }
-                    // Sleep briefly to avoid consuming too much CPU
-                    Thread.sleep(200);
                 }
-            } catch (IOException | InterruptedException e) {
-                // Thread is terminating, no need to log the error
+            } catch (InterruptedException e) {
+                // Thread is terminating
             }
         });
 
-        // Set as daemon thread so it terminates when the main thread exits
         notificationThread.setDaemon(true);
         notificationThread.start();
-
         return notificationThread;
     }
 
@@ -159,53 +202,88 @@ public class Client {
                                             BufferedReader reader, String serverHost, int serverPort,
                                             String clientName, Socket socket) throws IOException {
 
-        while (true) {
+        while (connectionActive) {
             System.out.print(PROMPT);
+
+            if (!scanner.hasNextLine()) {
+                break;
+            }
+
             String command = scanner.nextLine().trim();
 
             if (command.isEmpty()) {
                 continue;
             }
 
-            // Get the command without parsing
+            if (!isConnectionActive(socket)) {
+                break;
+            }
+
             String[] parts = command.split("\\s+", 2);
             String cmd = parts[0].toUpperCase();
 
-            switch (cmd) {
-                case CMD_UPLOAD:
-                    handleUploadCommand(command, serverHost, serverPort, clientName);
+            try {
+                if (!isConnectionActive(socket)) {
                     break;
+                }
 
-                case CMD_DOWNLOAD:
-                    handleDownloadCommand(command, serverHost, serverPort, clientName);
+                switch (cmd) {
+                    case CMD_UPLOAD:
+                        handleUploadCommand(command, serverHost, serverPort, clientName);
+                        break;
+
+                    case CMD_DOWNLOAD:
+                        handleDownloadCommand(command, serverHost, serverPort, clientName);
+                        break;
+
+                    case CMD_LIST:
+                        handleListCommand(writer, socket, reader);
+                        break;
+
+                    case CMD_LOGS:
+                        handleLogsCommand(command, writer, socket, reader);
+                        break;
+
+                    case CMD_DELETE:
+                        handleDeleteCommand(command, writer, socket, reader);
+                        break;
+
+                    default:
+                        if (!isConnectionActive(socket)) {
+                            break;
+                        }
+                        System.out.println(ERR_INVALID_COMMAND);
+                }
+
+                if (!isConnectionActive(socket)) {
                     break;
-
-                case CMD_LIST:
-                    handleListCommand(writer, socket, reader);
-                    break;
-
-                case CMD_LOGS:
-                    handleLogsCommand(command, writer, socket, reader);
-                    break;
-
-                default:
-                    System.out.println(ERR_INVALID_COMMAND);
+                }
+            } catch (IOException e) {
+                connectionActive = false;
+                System.out.println("Connection error: " + e.getMessage());
+                System.out.println(CONNECTION_CLOSED);
+                break;
             }
         }
     }
 
+    private static boolean isConnectionActive(Socket socket) {
+        if (!connectionActive || socket.isClosed() || !socket.isConnected()) {
+            System.out.println(CONNECTION_CLOSED);
+            connectionActive = false;
+            return false;
+        }
+        return true;
+    }
+
     private static void handleUploadCommand(String command, String serverHost,
                                             int serverPort, String clientName) {
-
-        // Extract the file path from the command
         String filePath = command.substring(CMD_UPLOAD.length()).trim();
 
-        // Remove quotes if present
         if (filePath.startsWith("\"") && filePath.endsWith("\"")) {
             filePath = filePath.substring(1, filePath.length() - 1);
         }
 
-        // Check if the path is not empty
         if (filePath.isEmpty()) {
             System.out.println(String.format(ERR_MISSING_FILENAME, CMD_UPLOAD));
             System.out.println(String.format(INFO_COMMAND_USAGE, CMD_UPLOAD, CMD_UPLOAD));
@@ -216,16 +294,12 @@ public class Client {
 
     private static void handleDownloadCommand(String command, String serverHost,
                                               int serverPort, String clientName) {
-
-        // Extract the filename from the command
         String filename = command.substring(CMD_DOWNLOAD.length()).trim();
 
-        // Remove quotes if present
         if (filename.startsWith("\"") && filename.endsWith("\"")) {
             filename = filename.substring(1, filename.length() - 1);
         }
 
-        // Check if the path is not empty
         if (filename.isEmpty()) {
             System.out.println(String.format(ERR_MISSING_FILENAME, CMD_DOWNLOAD));
             System.out.println(String.format(INFO_COMMAND_USAGE, CMD_DOWNLOAD, CMD_DOWNLOAD));
@@ -234,21 +308,71 @@ public class Client {
         }
     }
 
+    private static void handleDeleteCommand(String command, BufferedWriter writer,
+                                            Socket socket, BufferedReader reader) throws IOException {
+        if (!connectionActive || socket.isClosed()) {
+            System.out.println(CONNECTION_CLOSED);
+            return;
+        }
+
+        String filename = command.substring(CMD_DELETE.length()).trim();
+
+        if (filename.startsWith("\"") && filename.endsWith("\"")) {
+            filename = filename.substring(1, filename.length() - 1);
+        }
+
+        if (filename.isEmpty()) {
+            System.out.println(String.format(ERR_MISSING_FILENAME, CMD_DELETE));
+            System.out.println(String.format(INFO_COMMAND_USAGE, CMD_DELETE, CMD_DELETE));
+            return;
+        }
+
+        System.out.println(String.format(INFO_DELETE_PROCESSING, filename));
+
+        try {
+            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
+
+            writer.write(CMD_DELETE + " " + encodedFilename + "\n");
+            writer.flush();
+
+            String response = reader.readLine();
+            if (response == null) {
+                connectionActive = false;
+                System.out.println(CONNECTION_CLOSED);
+                return;
+            }
+            System.out.println(response);
+        } catch (IOException e) {
+            System.out.println(String.format(ERR_DELETE_FAILED, e.getMessage()));
+            if (!socket.isConnected() || socket.isClosed()) {
+                connectionActive = false;
+                System.out.println(CONNECTION_CLOSED);
+            }
+            throw e;
+        }
+    }
+
     private static void handleListCommand(BufferedWriter writer, Socket socket,
                                           BufferedReader reader) throws IOException {
+        if (!connectionActive || socket.isClosed()) {
+            System.out.println(CONNECTION_CLOSED);
+            return;
+        }
 
         writer.write(CMD_LIST + "\n");
         writer.flush();
         System.out.println(INFO_REQUEST_LIST);
 
-        // Read LIST response with improved handling
         readServerResponse(socket, reader);
     }
 
     private static void handleLogsCommand(String command, BufferedWriter writer,
                                           Socket socket, BufferedReader reader) throws IOException {
+        if (!connectionActive || socket.isClosed()) {
+            System.out.println(CONNECTION_CLOSED);
+            return;
+        }
 
-        // Get log count if specified
         int logCount = 10; // Default
         String[] parts = command.split("\\s+", 2);
         if (parts.length > 1) {
@@ -263,14 +387,12 @@ public class Client {
         writer.flush();
         System.out.println(String.format(INFO_REQUEST_LOGS, logCount));
 
-        // Read LOGS response
         readServerResponse(socket, reader);
     }
 
     private static void handleUpload(String filePath, String serverHost, int serverPort, String clientName) {
         System.out.println(String.format(INFO_PROCESSING, "UPLOAD", filePath));
 
-        // Handle the file path - now supports full paths
         File file = new File(filePath);
 
         if (!file.exists()) {
@@ -279,16 +401,13 @@ public class Client {
             return;
         }
 
-        // Get just the filename for the server (without path)
         String filename = file.getName();
 
-        // Check for blocked file types
         if (FileValidationUtils.isBlockedFileType(filename)) {
             System.out.println(ERR_BLOCKED_FILE_TYPE);
             return;
         }
 
-        // Check file size
         long fileSize = file.length();
         if (fileSize > MAX_FILE_SIZE) {
             System.out.println(ERR_FILE_TOO_LARGE);
@@ -297,7 +416,6 @@ public class Client {
 
         System.out.println(String.format(INFO_PREPARING, filename, fileSize));
 
-        // URL encode the filename to safely transmit it
         String encodedFilename;
         try {
             encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
@@ -306,12 +424,9 @@ public class Client {
             return;
         }
 
-        // Create a new socket for the file transfer
         try (Socket uploadSocket = new Socket(serverHost, serverPort)) {
-            // Configure upload socket with longer timeout for larger files
             SocketHandler.configureFileTransferSocket(uploadSocket);
 
-            // Create streams for the upload socket
             BufferedReader uploadReader = new BufferedReader(
                     new InputStreamReader(uploadSocket.getInputStream(), StandardCharsets.UTF_8));
             BufferedWriter uploadWriter = new BufferedWriter(
@@ -319,37 +434,29 @@ public class Client {
             DataOutputStream uploadDataOut = new DataOutputStream(
                     new BufferedOutputStream(uploadSocket.getOutputStream(), BUFFER_SIZE));
 
-            // Skip the welcome message
             uploadReader.readLine();
 
-            // Identify to the server
             uploadWriter.write(CLIENT_ID_PREFIX + clientName + "_upload\n");
             uploadWriter.flush();
 
-            // Skip the available commands message
             uploadReader.readLine();
 
-            // Send the UPLOAD command
             uploadWriter.write(CMD_UPLOAD + " " + encodedFilename + "\n");
             uploadWriter.flush();
 
-            // Ensure protocol synchronization with small delay
             try {
                 Thread.sleep(50);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
 
-            // Send file size
             uploadDataOut.writeLong(fileSize);
 
-            // Calculate and send checksum
             byte[] checksum = calculateChecksum(file);
             uploadDataOut.writeInt(checksum.length);
             uploadDataOut.write(checksum);
             uploadDataOut.flush();
 
-            // Upload with progress reporting using larger buffer
             try (BufferedInputStream fileIn = new BufferedInputStream(new FileInputStream(file), BUFFER_SIZE)) {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 int count;
@@ -361,7 +468,6 @@ public class Client {
                     total += count;
                     int currentPercentage = (int)(100 * total / (double)fileSize);
 
-                    // Report progress in 10% increments
                     if (currentPercentage >= lastPercentageReported + 10) {
                         lastPercentageReported = currentPercentage;
                         System.out.println(String.format(INFO_PROGRESS, "Upload", currentPercentage));
@@ -371,7 +477,6 @@ public class Client {
                 System.out.println(String.format(INFO_COMPLETED, "File upload"));
             }
 
-            // Wait for server response
             try {
                 uploadSocket.setSoTimeout(10000); // 10 second timeout for response
                 String uploadResponse = uploadReader.readLine();
@@ -393,7 +498,6 @@ public class Client {
     private static void handleDownload(String filename, String serverHost, int serverPort, String clientName) {
         System.out.println(String.format(INFO_PROCESSING, "DOWNLOAD", filename));
 
-        // URL encode the filename for safe transmission
         String encodedFilename;
         try {
             encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
@@ -402,12 +506,9 @@ public class Client {
             return;
         }
 
-        // Create a dedicated connection for downloading
         try (Socket downloadSocket = new Socket(serverHost, serverPort)) {
-            // Configure download socket
             SocketHandler.configureFileTransferSocket(downloadSocket);
 
-            // Create streams with larger buffers
             BufferedReader downloadReader = new BufferedReader(
                     new InputStreamReader(downloadSocket.getInputStream(), StandardCharsets.UTF_8));
             BufferedWriter downloadWriter = new BufferedWriter(
@@ -415,30 +516,24 @@ public class Client {
             DataInputStream downloadDataIn = new DataInputStream(
                     new BufferedInputStream(downloadSocket.getInputStream(), BUFFER_SIZE));
 
-            // Skip the welcome message
             downloadReader.readLine();
 
-            // Identify to the server
             downloadWriter.write(CLIENT_ID_PREFIX + clientName + "_download\n");
             downloadWriter.flush();
 
-            // Skip the available commands message
             downloadReader.readLine();
 
             System.out.println(String.format(INFO_PROCESSING, "download", filename));
 
-            // Send download command
             downloadWriter.write(CMD_DOWNLOAD + " " + encodedFilename + "\n");
             downloadWriter.flush();
 
-            // Ensure protocol synchronization with small delay
             try {
                 Thread.sleep(50);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
 
-            // Read file size
             long fileSize = downloadDataIn.readLong();
 
             if (fileSize < 0) {
@@ -446,7 +541,6 @@ public class Client {
                 return;
             }
 
-            // Validate file size
             if (fileSize > MAX_FILE_SIZE) {
                 System.out.println(String.format(ERR_INVALID_FILESIZE, fileSize));
                 return;
@@ -454,7 +548,6 @@ public class Client {
 
             System.out.println(String.format(INFO_RECEIVING, filename, fileSize));
 
-            // Receive checksum
             int checksumLength = downloadDataIn.readInt();
 
             if (checksumLength <= 0 || checksumLength > 64) {
@@ -465,13 +558,11 @@ public class Client {
             byte[] expectedChecksum = new byte[checksumLength];
             downloadDataIn.readFully(expectedChecksum);
 
-            // Create downloads directory if it doesn't exist
             File dir = new File(DOWNLOADS_DIR);
             if (!dir.exists()) {
                 dir.mkdirs();
             }
 
-            // Use a temporary file for downloading
             String tempFileName = "temp_" + System.currentTimeMillis() + "_" + filename;
             File tempFile = new File(dir, tempFileName);
             File outFile = new File(dir, filename);
@@ -493,7 +584,6 @@ public class Client {
                     fileOut.write(buffer, 0, count);
                     remaining -= count;
 
-                    // Report progress in 10% increments
                     int currentPercentage = (int)(100 * (fileSize - remaining) / (double)fileSize);
                     if (currentPercentage >= lastPercentageReported + 10) {
                         lastPercentageReported = currentPercentage;
@@ -503,17 +593,15 @@ public class Client {
                 fileOut.flush();
             }
 
-            // Verify checksum
             byte[] actualChecksum = calculateChecksum(tempFile);
             boolean checksumMatch = MessageDigest.isEqual(expectedChecksum, actualChecksum);
 
             if (!checksumMatch) {
                 System.out.println(ERR_CORRUPTED);
-                tempFile.delete(); // Delete corrupted file
+                tempFile.delete();
             } else {
-                // If checksum matches, rename temp file to final name
                 if (outFile.exists()) {
-                    outFile.delete(); // Delete any existing file with same name
+                    outFile.delete();
                 }
 
                 boolean renamed = tempFile.renameTo(outFile);
@@ -527,9 +615,8 @@ public class Client {
                 }
             }
 
-            // Check for server confirmation
             try {
-                downloadSocket.setSoTimeout(5000); // 5 second timeout for response
+                downloadSocket.setSoTimeout(5000);
                 String downloadResponse = downloadReader.readLine();
                 if (downloadResponse != null) {
                     System.out.println(downloadResponse);
@@ -541,36 +628,39 @@ public class Client {
             System.out.println(String.format(INFO_COMPLETED, "Download"));
         } catch (Exception e) {
             System.out.println(String.format(ERR_DOWNLOAD_FAILED, e.getMessage()));
-            e.printStackTrace();
         }
     }
 
     private static void readServerResponse(Socket socket, BufferedReader reader) throws IOException {
-        // Set a longer timeout for command responses
-        int originalTimeout = socket.getSoTimeout();
-        socket.setSoTimeout(30000); // 30 second timeout
+        if (!connectionActive || socket.isClosed()) {
+            throw new IOException("Connection closed");
+        }
 
+        int originalTimeout = socket.getSoTimeout();
         try {
+            socket.setSoTimeout(30000); // 30 second timeout
+
             String line;
             int lineCount = 0;
             boolean endMarkerFound = false;
 
             while (!endMarkerFound && lineCount < 100) {
-                // Check if there's data available or wait for timeout
+                if (!connectionActive || socket.isClosed()) {
+                    throw new IOException("Connection closed");
+                }
+
                 line = reader.readLine();
 
                 if (line == null) {
-                    // End of stream
-                    break;
+                    connectionActive = false;
+                    throw new IOException("Connection closed by server");
                 }
 
-                // Check for end marker
                 if (line.equals(RESPONSE_END_MARKER)) {
                     endMarkerFound = true;
                     continue;
                 }
 
-                // Print the line directly (unless it's an empty line after some content)
                 if (!(line.isEmpty() && lineCount > 0)) {
                     System.out.println(line);
                 }
@@ -583,9 +673,16 @@ public class Client {
             }
         } catch (SocketTimeoutException e) {
             System.out.println(ERR_SERVER_TIMEOUT);
+        } catch (SocketException e) {
+            connectionActive = false;
+            throw new IOException("Connection closed", e);
         } finally {
-            // Reset to original timeout
-            socket.setSoTimeout(originalTimeout);
+            try {
+                socket.setSoTimeout(originalTimeout);
+            } catch (SocketException e) {
+                connectionActive = false;
+                throw new IOException("Connection closed", e);
+            }
         }
     }
 

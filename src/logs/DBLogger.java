@@ -1,6 +1,5 @@
-package logs; // Add package declaration
+package logs;
 
-import logs.Logger;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -14,20 +13,12 @@ public class DBLogger {
 
     // Date format patterns
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    // Change this to include year and date in the display format
     private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     // Error messages
     private static final String ERR_INIT_FAILED = "Failed to initialize database logger";
     private static final String ERR_LOG_FAILED = "Failed to log action";
     private static final String ERR_LOGS_FAILED = "Failed to retrieve logs";
-    private static final String ERR_RESET_FAILED = "Failed to reset database";
-
-    @FunctionalInterface
-    private interface DatabaseOperation {
-        void execute(Connection connection) throws SQLException;
-    }
 
     private static synchronized void initialize() {
         if (initialized || initializing) return;
@@ -35,38 +26,31 @@ public class DBLogger {
         initializing = true;
         logger.log(Logger.Level.INFO, "DBLogger", "Initializing database logger - tables should be already created");
 
-        // No need to create tables here anymore - ConnectionManager.initializeDatabaseSchema handles it
         try {
             // Just verify the table exists as a sanity check
-            withConnection(conn -> {
-                // Verify logs table exists
-                try (ResultSet rs = conn.getMetaData().getTables(null, null, "logs", null)) {
-                    if (!rs.next()) {
-                        logger.log(Logger.Level.WARNING, "DBLogger",
-                                "Logs table doesn't exist, tables may not be properly initialized");
-                        return;
-                    }
+            boolean tableExists = ConnectionManager.queryWithConnection(conn -> {
+                try {
+                    // Use the tableExists helper method from ConnectionManager instead
+                    return ConnectionManager.tableExists(conn, "logs");
+                } catch (SQLException e) {
+                    logger.log(Logger.Level.ERROR, "DBLogger", "Error checking if logs table exists", e);
+                    return false;
                 }
+            }, false, "DBLogger");
 
-                initialized = true;
-                logger.log(Logger.Level.INFO, "DBLogger", "Database logger initialized successfully");
-            });
+            if (!tableExists) {
+                logger.log(Logger.Level.WARNING, "DBLogger",
+                        "Logs table doesn't exist, tables may not be properly initialized");
+                initializing = false;
+                return;
+            }
+
+            initialized = true;
+            logger.log(Logger.Level.INFO, "DBLogger", "Database logger initialized successfully");
         } catch (Exception e) {
             logger.log(Logger.Level.ERROR, "DBLogger", ERR_INIT_FAILED, e);
         } finally {
             initializing = false;
-        }
-    }
-
-    private static void withConnection(DatabaseOperation operation) throws SQLException {
-        ConnectionManager pool = ConnectionManager.getInstance();
-        Connection conn = null;
-
-        try {
-            conn = pool.getConnection();
-            operation.execute(conn);
-        } finally {
-            pool.releaseConnection(conn);
         }
     }
 
@@ -96,20 +80,26 @@ public class DBLogger {
         final String finalTimestamp = timestamp;
 
         try {
-            withConnection(conn -> {
-                try (PreparedStatement pstmt = conn.prepareStatement(
-                        "INSERT INTO logs (client, action, filename, timestamp) VALUES (?, ?, ?, ?)")) {
-                    pstmt.setString(1, finalClient);
-                    pstmt.setString(2, finalAction.toUpperCase());
-                    pstmt.setString(3, finalFilename);
-                    pstmt.setString(4, finalTimestamp);
-                    pstmt.executeUpdate();
+            ConnectionManager.executeWithConnection(conn -> {
+                try {
+                    try (PreparedStatement pstmt = conn.prepareStatement(
+                            "INSERT INTO logs (client, action, filename, timestamp) VALUES (?, ?, ?, ?)")) {
+                        pstmt.setString(1, finalClient);
+                        pstmt.setString(2, finalAction.toUpperCase());
+                        pstmt.setString(3, finalFilename);
+                        pstmt.setString(4, finalTimestamp);
+                        pstmt.executeUpdate();
 
-                    // Log successful operation
-                    logger.log(Logger.Level.INFO, "DBLogger",
-                            "Logged: " + finalClient + " " + finalAction + " " + finalFilename);
+                        // Log successful operation
+                        logger.log(Logger.Level.INFO, "DBLogger",
+                                String.format("Logged: %s %s %s", finalClient, finalAction, finalFilename));
+                    }
+                } catch (SQLException e) {
+                    // Handle SQL Exception inside the lambda
+                    logger.log(Logger.Level.ERROR, "DBLogger", "Error executing SQL: " + e.getMessage(), e);
+                    throw new RuntimeException(e); // Re-throw to be caught by executeWithConnection
                 }
-            });
+            }, "DBLogger");
         } catch (SQLException e) {
             logger.log(Logger.Level.ERROR, "DBLogger", ERR_LOG_FAILED, e);
         }
@@ -129,94 +119,68 @@ public class DBLogger {
 
         try {
             final int finalLimit = safeLimit;
-            final StringBuilder finalResult = result;
 
-            withConnection(conn -> {
-                try (PreparedStatement pstmt = conn.prepareStatement(
-                        "SELECT * FROM logs ORDER BY timestamp DESC LIMIT ?")) {
+            ConnectionManager.executeWithConnection(conn -> {
+                try {
+                    try (PreparedStatement pstmt = conn.prepareStatement(
+                            "SELECT * FROM logs ORDER BY timestamp DESC LIMIT ?")) {
 
-                    pstmt.setInt(1, finalLimit);
+                        pstmt.setInt(1, finalLimit);
 
-                    try (ResultSet rs = pstmt.executeQuery()) {
-                        boolean hasLogs = false;
+                        try (ResultSet rs = pstmt.executeQuery()) {
+                            boolean hasLogs = false;
 
-                        while (rs.next()) {
-                            hasLogs = true;
+                            while (rs.next()) {
+                                hasLogs = true;
 
-                            // Get the values from database
-                            String timestamp = rs.getString("timestamp");
-                            String client = rs.getString("client");
-                            String action = rs.getString("action");
-                            String filename = rs.getString("filename");
+                                // Get the values from database
+                                String timestamp = rs.getString("timestamp");
+                                String client = rs.getString("client");
+                                String action = rs.getString("action");
+                                String filename = rs.getString("filename");
 
-                            // Parse timestamp and reformat to include year and date
-                            try {
-                                LocalDateTime dateTime = LocalDateTime.parse(timestamp, TIMESTAMP_FORMAT);
-                                String formattedTime = dateTime.format(DISPLAY_FORMAT);
+                                // Parse timestamp and reformat to include year and date
+                                try {
+                                    LocalDateTime dateTime = LocalDateTime.parse(timestamp, TIMESTAMP_FORMAT);
+                                    String formattedTime = dateTime.format(DISPLAY_FORMAT);
 
-                                // Clean up client name if needed
-                                if (client.contains("_")) {
-                                    client = client.substring(0, client.indexOf("_"));
+                                    // Clean up client name if needed
+                                    if (client.contains("_")) {
+                                        client = client.substring(0, client.indexOf("_"));
+                                    }
+
+                                    // Format the log entry with year and date included
+                                    result.append(String.format("[%s] %s %s: %s\n",
+                                            formattedTime, client, action, filename));
+
+                                } catch (Exception e) {
+                                    // If any error in formatting, fall back to original format
+                                    result.append(String.format("[%s] %s %s: %s\n",
+                                            timestamp, client, action, filename));
+
+                                    logger.log(Logger.Level.WARNING, "DBLogger",
+                                            "Error formatting log entry: " + e.getMessage());
                                 }
+                            }
 
-                                // Format the log entry with year and date included
-                                finalResult.append("[").append(formattedTime).append("] ")
-                                        .append(client).append(" ")
-                                        .append(action).append(": ")
-                                        .append(filename).append("\n");
-
-                            } catch (Exception e) {
-                                // If any error in formatting, fall back to original format
-                                finalResult.append("[").append(timestamp).append("] ")
-                                        .append(client).append(" ")
-                                        .append(action).append(": ")
-                                        .append(filename).append("\n");
-
-                                logger.log(Logger.Level.WARNING, "DBLogger",
-                                        "Error formatting log entry: " + e.getMessage());
+                            if (!hasLogs) {
+                                result.append("No logs found.\n");
                             }
                         }
-
-                        if (!hasLogs) {
-                            finalResult.append("No logs found.\n");
-                        }
                     }
-                }
 
-                logger.log(Logger.Level.INFO, "DBLogger", "Retrieved " + finalLimit + " log entries");
-            });
+                    logger.log(Logger.Level.INFO, "DBLogger", "Retrieved " + finalLimit + " log entries");
+                } catch (SQLException e) {
+                    // Handle SQL Exception inside the lambda
+                    logger.log(Logger.Level.ERROR, "DBLogger", "Error executing SQL: " + e.getMessage(), e);
+                    throw new RuntimeException(e); // Re-throw to be caught by executeWithConnection
+                }
+            }, "DBLogger");
         } catch (SQLException e) {
             logger.log(Logger.Level.ERROR, "DBLogger", ERR_LOGS_FAILED, e);
             result.append("ERROR: ").append(ERR_LOGS_FAILED).append(": ").append(e.getMessage()).append("\n");
         }
 
         return result.toString();
-    }
-
-    @Deprecated
-    public static void resetDatabase() {
-        logger.log(Logger.Level.WARNING, "DBLogger", "Resetting logs database table");
-
-        try {
-            withConnection(conn -> {
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.executeUpdate("DROP TABLE IF EXISTS logs");
-                    stmt.executeUpdate("""
-                        CREATE TABLE logs (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            client TEXT NOT NULL,
-                            action TEXT NOT NULL,
-                            filename TEXT NOT NULL,
-                            timestamp TEXT NOT NULL
-                        )
-                    """);
-
-                    initialized = true;
-                    logger.log(Logger.Level.INFO, "DBLogger", "Database reset successfully");
-                }
-            });
-        } catch (SQLException e) {
-            logger.log(Logger.Level.ERROR, "DBLogger", ERR_RESET_FAILED, e);
-        }
     }
 }

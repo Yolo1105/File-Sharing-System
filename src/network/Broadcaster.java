@@ -23,6 +23,7 @@ public class Broadcaster {
     private static final String LEAVE_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s has left the server.\n";
     private static final String UPLOAD_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s uploaded file: %s\n";
     private static final String DOWNLOAD_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s downloaded file: %s\n";
+    private static final String DELETE_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s deleted file: %s\n";
 
     // Log messages
     private static final String LOG_SKIPPING_NOTIFICATION = "Skipping notification for utility connection: %s";
@@ -132,6 +133,15 @@ public class Broadcaster {
         }
 
         broadcast(String.format(DOWNLOAD_MESSAGE_FORMAT, downloaderName, filename), null);
+    }
+
+    public void broadcastFileDeletion(String deleterName, String filename) {
+        // Skip notifications for utility connections
+        if (isUtilityConnection(deleterName)) {
+            return;
+        }
+
+        broadcast(String.format(DELETE_MESSAGE_FORMAT, deleterName, filename), null);
     }
 
     public int getConnectedClientsCount() {

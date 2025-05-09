@@ -3,6 +3,7 @@ package database;
 import logs.Logger;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -10,39 +11,38 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import utils.ResourceUtils;
 import config.Config;
 
 public class ConnectionManager {
     private static final ConnectionManager instance = new ConnectionManager();
-    // Initialize logger as static to avoid NPE
     private static final Logger logger = Logger.getInstance();
     private final String dbUrl;
     private final List<Connection> connections;
     private final Semaphore semaphore;
-    // Reduced connection limit for better SQLite compatibility
-    private final int MAX_CONNECTIONS = 5;
-    private final int CONNECTION_TIMEOUT_SECONDS = 30;
+    private final int MAX_CONNECTIONS;
+    private final int CONNECTION_TIMEOUT_SECONDS;
     private boolean initialized = false;
     private boolean databaseSchemaInitialized = false;
 
     private ConnectionManager() {
-        // Use System.out for initialization to avoid circular dependency with Logger
         System.out.println("[INIT] Initializing ConnectionPool with database URL: " + Config.getDbUrl());
 
         dbUrl = Config.getDbUrl();
+        MAX_CONNECTIONS = Config.getDbMaxConnections();
+        CONNECTION_TIMEOUT_SECONDS = Config.getDbConnectionTimeout();
         connections = new ArrayList<>(MAX_CONNECTIONS);
         semaphore = new Semaphore(MAX_CONNECTIONS, true);
 
         try {
             // Initialize connections lazily when first requested
-            // This avoids circular dependency issues during startup
             System.out.println("[INIT] ConnectionPool initialized without connections. Will create on demand.");
 
             // Add shutdown hook to close connections
             Runtime.getRuntime().addShutdownHook(new Thread(this::closeAllConnections));
-
         } catch (Exception e) {
             System.err.println("[FATAL] Database initialization failed: " + e.getMessage());
             e.printStackTrace();
@@ -69,14 +69,8 @@ public class ConnectionManager {
         try {
             conn = pool.getConnection();
 
-            // Enable foreign keys for SQLite
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute("PRAGMA foreign_keys = ON");
-                // Add SQLite optimizations for better concurrency
-                stmt.execute("PRAGMA journal_mode = WAL");
-                stmt.execute("PRAGMA synchronous = NORMAL");
-                stmt.execute("PRAGMA busy_timeout = 3000");
-            }
+            // Apply SQLite optimizations
+            applySQLitePragmas(conn);
 
             // Initialize all required tables
             createFilesTable(conn);
@@ -100,6 +94,16 @@ public class ConnectionManager {
             throw new RuntimeException("Failed to initialize database schema", e);
         } finally {
             pool.releaseConnection(conn);
+        }
+    }
+
+    // Utility method for applying SQLite optimizations - consolidated from multiple places
+    public static void applySQLitePragmas(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("PRAGMA foreign_keys = ON");
+            stmt.execute("PRAGMA journal_mode = WAL");
+            stmt.execute("PRAGMA synchronous = NORMAL");
+            stmt.execute("PRAGMA busy_timeout = 3000");
         }
     }
 
@@ -146,7 +150,7 @@ public class ConnectionManager {
         }
     }
 
-    private static boolean tableExists(Connection conn, String tableName) throws SQLException {
+    public static boolean tableExists(Connection conn, String tableName) throws SQLException {
         try (ResultSet rs = conn.getMetaData().getTables(null, null, tableName, null)) {
             return rs.next();
         }
@@ -165,16 +169,8 @@ public class ConnectionManager {
             initialized = true;
 
             // Now that connections are initialized, we can safely log using Logger
-            try {
-                if (logger != null) {
-                    logger.log(Logger.Level.INFO, "ConnectionPool",
-                            "Connection pool initialized with " + connections.size() + " initial connections");
-                }
-            } catch (Exception e) {
-                // If logger still has issues, just use console
-                System.out.println("[INFO] Connection pool initialized with " + connections.size() + " initial connections");
-            }
-
+            logger.log(Logger.Level.INFO, "ConnectionPool",
+                    "Connection pool initialized with " + connections.size() + " initial connections");
         } catch (SQLException e) {
             System.err.println("[FATAL] Failed to initialize database connections: " + e.getMessage());
             e.printStackTrace();
@@ -185,15 +181,10 @@ public class ConnectionManager {
     private Connection createConnection() throws SQLException {
         try {
             Connection conn = DriverManager.getConnection(dbUrl);
-            // Set any needed connection properties
             conn.setAutoCommit(true);
 
             // Apply SQLite optimizations
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute("PRAGMA journal_mode = WAL");
-                stmt.execute("PRAGMA synchronous = NORMAL");
-                stmt.execute("PRAGMA busy_timeout = 3000");
-            }
+            applySQLitePragmas(conn);
 
             // Test the connection
             if (!conn.isValid(5)) {
@@ -231,13 +222,7 @@ public class ConnectionManager {
                     Connection conn = connections.remove(connections.size() - 1);
 
                     if (conn.isClosed() || !conn.isValid(2)) {
-                        try {
-                            System.out.println("[WARNING] Found invalid connection in pool, creating new one");
-                            ResourceUtils.safeClose(conn);
-                        } catch (Exception e) {
-                            // Ignore errors when closing invalid connection
-                        }
-
+                        ResourceUtils.safeClose(conn);
                         try {
                             conn = createConnection();
                         } catch (SQLException e) {
@@ -299,6 +284,84 @@ public class ConnectionManager {
         } finally {
             // Always release the semaphore
             semaphore.release();
+        }
+    }
+
+    // General database utility methods incorporated from SchemaManager
+    public static void executeWithConnection(Consumer<Connection> action, String logSource) throws SQLException {
+        ConnectionManager pool = getInstance();
+        Connection conn = null;
+
+        try {
+            conn = pool.getConnection();
+            action.accept(conn);
+        } catch (SQLException e) {
+            logger.log(Logger.Level.ERROR, logSource, "Database operation failed: " + e.getMessage(), e);
+            throw e;
+        } finally {
+            pool.releaseConnection(conn);
+        }
+    }
+
+    public static <T> T queryWithConnection(Function<Connection, T> function, T defaultValue, String logSource) {
+        ConnectionManager pool = getInstance();
+        Connection conn = null;
+
+        try {
+            conn = pool.getConnection();
+            return function.apply(conn);
+        } catch (SQLException e) {
+            logger.log(Logger.Level.ERROR, logSource, "Connection operation failed: " + e.getMessage(), e);
+            return defaultValue;
+        } finally {
+            pool.releaseConnection(conn);
+        }
+    }
+
+    public static <T> List<T> queryList(String query, Function<ResultSet, T> rowMapper, String logSource) {
+        return queryWithConnection(conn -> {
+            List<T> results = new ArrayList<>();
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(query)) {
+                while (rs.next()) {
+                    results.add(rowMapper.apply(rs));
+                }
+            } catch (SQLException e) {
+                logger.log(Logger.Level.ERROR, logSource, "Error executing query: " + e.getMessage(), e);
+            }
+            return results;
+        }, new ArrayList<>(), logSource);
+    }
+
+    // Fix for the method on line 350
+    public static void executeTransaction(Consumer<Connection> transaction, String logSource) {
+        try {
+            executeWithConnection(conn -> {
+                boolean originalAutoCommit = false;
+                try {
+                    originalAutoCommit = conn.getAutoCommit();
+                    conn.setAutoCommit(false);
+                    transaction.accept(conn);
+                    conn.commit();
+                } catch (SQLException e) {
+                    try {
+                        conn.rollback();
+                    } catch (SQLException rollbackEx) {
+                        logger.log(Logger.Level.ERROR, logSource, "Error during rollback", rollbackEx);
+                    }
+                    // Handle the SQLException here instead of rethrowing it
+                    logger.log(Logger.Level.ERROR, logSource, "Transaction failed", e);
+                } finally {
+                    try {
+                        conn.setAutoCommit(originalAutoCommit);
+                    } catch (SQLException resetEx) {
+                        logger.log(Logger.Level.ERROR, logSource, "Error resetting auto-commit", resetEx);
+                    }
+                }
+            }, logSource);
+        } catch (SQLException e) {
+            // Handle any SQLException from executeWithConnection
+            logger.log(Logger.Level.ERROR, logSource, "Database operation failed in transaction", e);
         }
     }
 

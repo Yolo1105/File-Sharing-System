@@ -18,10 +18,10 @@ public class FileManager {
     private static final int BUFFER_SIZE = Config.getBufferSize();
     private static final AtomicBoolean tablesVerified = new AtomicBoolean(false);
 
-    // Maximum file size (10MB)
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+    // Maximum file size
+    private static final long MAX_FILE_SIZE = Config.getMaxFileSize();
 
-    // Error message constants - consolidated and cleaned up
+    // Error message constants
     private static final String ERR_DECODE_FILENAME = "Failed to decode filename";
     private static final String ERR_FILE_TRANSFER = "File transfer failed";
     private static final String ERR_FILE_NOT_FOUND = "File not found in database";
@@ -29,11 +29,12 @@ public class FileManager {
     private static final String ERR_INVALID_CHECKSUM = "Invalid checksum length";
     private static final String ERR_CHECKSUM_VERIFICATION = "Checksum verification failed";
     private static final String ERR_BLOCKED_FILE_TYPE = "This file type is not allowed for security reasons";
-    private static final String ERR_FILE_TOO_LARGE = "File exceeds maximum size limit of 10MB";
+    private static final String ERR_FILE_TOO_LARGE = "File exceeds maximum size limit";
 
     // Success messages
     private static final String SUCCESS_FILE_SAVED = "File saved to database";
     private static final String SUCCESS_FILE_RECEIVED = "File received successfully";
+    private static final String SUCCESS_FILE_DELETED = "File deleted successfully";
 
     public FileManager() {
         logger.log(Logger.Level.INFO, "FileManager", "FileManager initialized");
@@ -46,29 +47,8 @@ public class FileManager {
         }
 
         logger.log(Logger.Level.INFO, "FileManager", "Verifying database tables");
-
         tablesVerified.set(true);
         logger.log(Logger.Level.INFO, "FileManager", "Database tables verified");
-    }
-
-    @FunctionalInterface
-    private interface DatabaseOperation<T> {
-        T execute(Connection connection) throws SQLException;
-    }
-
-    private <T> T withConnection(DatabaseOperation<T> operation, T defaultValue) {
-        ConnectionManager pool = ConnectionManager.getInstance();
-        Connection conn = null;
-
-        try {
-            conn = pool.getConnection();
-            return operation.execute(conn);
-        } catch (SQLException e) {
-            logger.log(Logger.Level.ERROR, "FileManager", "Database operation failed", e);
-            return defaultValue;
-        } finally {
-            pool.releaseConnection(conn);
-        }
     }
 
     public void receiveFile(String encodedFileName, DataInputStream dataIn) {
@@ -157,7 +137,7 @@ public class FileManager {
             if (fileSize > 1000000 && (fileSize - remaining) - lastLoggedProgress > fileSize / 5) {
                 lastLoggedProgress = fileSize - remaining;
                 int progress = (int)((fileSize - remaining) * 100 / fileSize);
-                logger.log(Logger.Level.INFO, "FileManager", "Receive progress: " + progress + "%");
+                logger.log(Logger.Level.INFO, "FileManager", String.format("Receive progress: %d%%", progress));
             }
         }
 
@@ -174,26 +154,31 @@ public class FileManager {
 
     private void saveFileToDatabase(String fileName, byte[] content, long fileSize, byte[] checksum)
             throws SQLException {
-        withConnection(conn -> {
-            // First try to delete if file exists
-            try (PreparedStatement pstmt = conn.prepareStatement("DELETE FROM files WHERE filename = ?")) {
-                pstmt.setString(1, fileName);
-                pstmt.executeUpdate();
-            }
+        ConnectionManager.executeWithConnection(conn -> {
+            try {
+                // First try to delete if file exists
+                try (PreparedStatement pstmt = conn.prepareStatement("DELETE FROM files WHERE filename = ?")) {
+                    pstmt.setString(1, fileName);
+                    pstmt.executeUpdate();
+                }
 
-            // Now insert the new file
-            try (PreparedStatement pstmt = conn.prepareStatement(
-                    "INSERT INTO files (filename, content, file_size, checksum) VALUES (?, ?, ?, ?)")) {
-                pstmt.setString(1, fileName);
-                pstmt.setBytes(2, content);
-                pstmt.setLong(3, fileSize);
-                pstmt.setBytes(4, checksum);
-                pstmt.executeUpdate();
+                // Now insert the new file
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                        "INSERT INTO files (filename, content, file_size, checksum) VALUES (?, ?, ?, ?)")) {
+                    pstmt.setString(1, fileName);
+                    pstmt.setBytes(2, content);
+                    pstmt.setLong(3, fileSize);
+                    pstmt.setBytes(4, checksum);
+                    pstmt.executeUpdate();
 
-                logger.log(Logger.Level.INFO, "FileManager", SUCCESS_FILE_SAVED + ": " + fileName);
+                    logger.log(Logger.Level.INFO, "FileManager", SUCCESS_FILE_SAVED + ": " + fileName);
+                }
+            } catch (SQLException e) {
+                // Handle SQL Exception inside the lambda
+                logger.log(Logger.Level.ERROR, "FileManager", "Error executing SQL: " + e.getMessage(), e);
+                throw new RuntimeException(e); // Re-throw to be caught by executeWithConnection
             }
-            return null;
-        }, null);
+        }, "FileManager");
     }
 
     public void sendFile(String encodedFileName, OutputStream outputStream) {
@@ -236,13 +221,13 @@ public class FileManager {
 
             // Send file size
             dataOut.writeLong(fileData.fileSize);
-            logger.log(Logger.Level.INFO, "FileManager", "Sending file size: " + fileData.fileSize + " bytes");
+            logger.log(Logger.Level.INFO, "FileManager", String.format("Sending file size: %d bytes", fileData.fileSize));
 
             // Send checksum
             dataOut.writeInt(fileData.checksum.length);
             dataOut.write(fileData.checksum);
             logger.log(Logger.Level.INFO, "FileManager",
-                    "Sending checksum of length: " + fileData.checksum.length + " bytes");
+                    String.format("Sending checksum of length: %d bytes", fileData.checksum.length));
             dataOut.flush();
 
             // Send file contents
@@ -255,6 +240,41 @@ public class FileManager {
             logger.log(Logger.Level.ERROR, "FileManager", "Error retrieving file: " + fileName, e);
             throw new RuntimeException("Failed to retrieve file: " + fileName, e);
         }
+    }
+
+    public boolean deleteFile(String encodedFileName) {
+        String fileName;
+        try {
+            fileName = URLDecoder.decode(encodedFileName, StandardCharsets.UTF_8.toString());
+        } catch (UnsupportedEncodingException e) {
+            logger.log(Logger.Level.ERROR, "FileManager", ERR_DECODE_FILENAME, e);
+            throw new RuntimeException(ERR_DECODE_FILENAME, e);
+        }
+
+        // Sanitize the filename
+        String sanitizedFileName = sanitizeFileName(fileName);
+
+        return ConnectionManager.queryWithConnection(conn -> {
+            try {
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                        "DELETE FROM files WHERE filename = ?")) {
+                    pstmt.setString(1, sanitizedFileName);
+                    int rowsAffected = pstmt.executeUpdate();
+
+                    boolean deleted = rowsAffected > 0;
+                    if (deleted) {
+                        logger.log(Logger.Level.INFO, "FileManager", SUCCESS_FILE_DELETED + ": " + sanitizedFileName);
+                    } else {
+                        logger.log(Logger.Level.WARNING, "FileManager", ERR_FILE_NOT_FOUND + ": " + sanitizedFileName);
+                    }
+                    return deleted;
+                }
+            } catch (SQLException e) {
+                // Handle SQL Exception inside the lambda
+                logger.log(Logger.Level.ERROR, "FileManager", "Error executing SQL: " + e.getMessage(), e);
+                throw new RuntimeException(e); // Re-throw to be caught by queryWithConnection
+            }
+        }, false, "FileManager");
     }
 
     private static class FileData {
@@ -270,54 +290,64 @@ public class FileManager {
     }
 
     private FileData getFileFromDatabase(String fileName) throws SQLException {
-        return withConnection(conn -> {
-            try (PreparedStatement pstmt = conn.prepareStatement(
-                    "SELECT content, file_size, checksum FROM files WHERE filename = ?")) {
-                pstmt.setString(1, fileName);
+        return ConnectionManager.queryWithConnection(conn -> {
+            try {
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                        "SELECT content, file_size, checksum FROM files WHERE filename = ?")) {
+                    pstmt.setString(1, fileName);
 
-                try (ResultSet rs = pstmt.executeQuery()) {
-                    if (rs.next()) {
-                        byte[] content = rs.getBytes("content");
-                        long fileSize = rs.getLong("file_size");
-                        byte[] checksum = rs.getBytes("checksum");
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        if (rs.next()) {
+                            byte[] content = rs.getBytes("content");
+                            long fileSize = rs.getLong("file_size");
+                            byte[] checksum = rs.getBytes("checksum");
 
-                        return new FileData(content, fileSize, checksum);
+                            return new FileData(content, fileSize, checksum);
+                        }
+                        return null; // File not found
                     }
                 }
+            } catch (SQLException e) {
+                // Handle SQL Exception inside the lambda
+                logger.log(Logger.Level.ERROR, "FileManager", "Error executing SQL: " + e.getMessage(), e);
+                throw new RuntimeException(e); // Re-throw to be caught by queryWithConnection
             }
-            return null; // File not found
-        }, null);
+        }, null, "FileManager");
     }
 
     public String listFiles() {
-        return withConnection(conn -> {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Available files:\n");
+        return ConnectionManager.queryWithConnection(conn -> {
+            try {
+                StringBuilder sb = new StringBuilder();
+                sb.append("Available files:\n");
 
-            try (PreparedStatement pstmt = conn.prepareStatement(
-                    "SELECT filename, file_size FROM files ORDER BY filename")) {
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                        "SELECT filename, file_size FROM files ORDER BY filename")) {
 
-                try (ResultSet rs = pstmt.executeQuery()) {
-                    boolean hasFiles = false;
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        boolean hasFiles = false;
 
-                    while (rs.next()) {
-                        hasFiles = true;
-                        String fileName = rs.getString("filename");
-                        long fileSize = rs.getLong("file_size");
+                        while (rs.next()) {
+                            hasFiles = true;
+                            String fileName = rs.getString("filename");
+                            long fileSize = rs.getLong("file_size");
 
-                        sb.append(" - ").append(fileName)
-                                .append(" (").append(fileSize).append(" bytes)")
-                                .append("\n");
-                    }
+                            sb.append(String.format(" - %s (%d bytes)\n", fileName, fileSize));
+                        }
 
-                    if (!hasFiles) {
-                        sb.append("No files available.\n");
+                        if (!hasFiles) {
+                            sb.append("No files available.\n");
+                        }
                     }
                 }
-            }
 
-            return sb.toString();
-        }, "Error listing files. Please try again later.");
+                return sb.toString();
+            } catch (SQLException e) {
+                // Handle SQL Exception inside the lambda
+                logger.log(Logger.Level.ERROR, "FileManager", "Error executing SQL: " + e.getMessage(), e);
+                throw new RuntimeException(e); // Re-throw to be caught by queryWithConnection
+            }
+        }, "Error listing files. Please try again later.", "FileManager");
     }
 
     private String sanitizeFileName(String filename) {

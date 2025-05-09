@@ -117,3 +117,446 @@
 [2025-05-08 16:53:02] [INFO] [MainServer] Server shutting down...
 [2025-05-08 16:53:02] [INFO] [Logger] Logging system shutting down
 [2025-05-08 16:53:03] [INFO] [Logger] Logging system shutting down
+[2025-05-08 20:44:46] [INFO] [Logger] Logging system initialized
+[2025-05-08 20:44:46] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 20:44:46] [INFO] [MainServer] Initializing server...
+[2025-05-08 20:44:47] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 20:44:47] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 20:44:47] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 20:44:47] [INFO] [MainServer] Server started successfully
+[2025-05-08 20:44:52] [INFO] [Logger] Logging system initialized
+[2025-05-08 20:44:52] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 20:44:52] [INFO] [MainServer] Initializing server...
+[2025-05-08 20:44:52] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 20:44:52] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 20:44:52] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 20:44:52] [FATAL] [MainServer] Could not start server on port 9000: Address already in use: bind
+java.net.BindException: Address already in use: bind
+	at java.base/sun.nio.ch.Net.bind0(Native Method)
+	at java.base/sun.nio.ch.Net.bind(Net.java:555)
+	at java.base/sun.nio.ch.Net.bind(Net.java:544)
+	at java.base/sun.nio.ch.NioSocketImpl.bind(NioSocketImpl.java:648)
+	at java.base/java.net.ServerSocket.bind(ServerSocket.java:388)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:274)
+	at java.base/java.net.ServerSocket.<init>(ServerSocket.java:167)
+	at MainServer.main(MainServer.java:98)
+
+[2025-05-08 20:44:52] [INFO] [Logger] Logging system shutting down
+[2025-05-08 20:44:52] [INFO] [MainServer] Server shutting down...
+[2025-05-08 20:45:07] [INFO] [MainServer] Server shutting down...
+[2025-05-08 20:45:07] [INFO] [Logger] Logging system shutting down
+[2025-05-08 20:45:15] [INFO] [Logger] Logging system initialized
+[2025-05-08 20:45:15] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 20:45:15] [INFO] [MainServer] Initializing server...
+[2025-05-08 20:45:15] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 20:45:15] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 20:45:15] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 20:45:15] [INFO] [MainServer] Server started successfully
+[2025-05-08 20:45:20] [INFO] [Logger] Logging system initialized
+[2025-05-08 20:45:20] [INFO] [Client] Starting client...
+[2025-05-08 20:45:20] [INFO] [MainServer] New connection accepted from: /127.0.0.1:54910 (Active connections: 1)
+[2025-05-08 20:45:20] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 20:45:20] [INFO] [FileManager] FileManager initialized
+[2025-05-08 20:45:20] [INFO] [FileManager] Verifying database tables
+[2025-05-08 20:45:20] [INFO] [FileManager] Database tables verified
+[2025-05-08 20:45:20] [INFO] [ClientHandler] New client connected: /127.0.0.1:54910
+[2025-05-08 20:45:25] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-08 20:45:25] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-08 20:45:28] [INFO] [Logger] Logging system initialized
+[2025-05-08 20:45:28] [INFO] [Client] Starting client...
+[2025-05-08 20:45:28] [INFO] [MainServer] New connection accepted from: /127.0.0.1:54914 (Active connections: 2)
+[2025-05-08 20:45:28] [INFO] [ClientHandler] New client connected: /127.0.0.1:54914
+[2025-05-08 20:45:28] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 20:45:30] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-08 20:45:30] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has joined the server. (excluding MOMO) to 1 clients
+[2025-05-08 20:45:50] [INFO] [MainServer] New connection accepted from: /127.0.0.1:54918 (Active connections: 3)
+[2025-05-08 20:45:50] [INFO] [ClientHandler] New client connected: /127.0.0.1:54918
+[2025-05-08 20:45:50] [INFO] [ClientHandler] Mohan_upload issued command: UPLOAD photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:45:50] [INFO] [FileManager] Starting file reception for: photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:45:50] [INFO] [FileManager] Receiving file: photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:45:50] [INFO] [FileManager] File size reported: 81568 bytes
+[2025-05-08 20:45:50] [INFO] [FileManager] Checksum length: 32
+[2025-05-08 20:45:50] [INFO] [FileManager] Checksum received
+[2025-05-08 20:45:50] [INFO] [FileManager] Starting file data transfer
+[2025-05-08 20:45:50] [INFO] [FileManager] File data transfer complete
+[2025-05-08 20:45:50] [INFO] [FileManager] Checksum verification successful
+[2025-05-08 20:45:50] [INFO] [FileManager] File saved to database: photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:45:50] [INFO] [FileManager] File received successfully: photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:45:50] [INFO] [DBLogger] Initializing database logger - tables should be already created
+[2025-05-08 20:45:50] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-08 20:45:50] [INFO] [DBLogger] Logged: Mohan UPLOAD photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:45:50] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_upload
+[2025-05-08 20:45:50] [INFO] [MainServer] Connection closed. Active connections: 2
+[2025-05-08 20:45:57] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-08 20:46:24] [INFO] [MainServer] New connection accepted from: /127.0.0.1:54919 (Active connections: 3)
+[2025-05-08 20:46:24] [INFO] [ClientHandler] New client connected: /127.0.0.1:54919
+[2025-05-08 20:46:24] [INFO] [ClientHandler] Mohan_download issued command: DOWNLOAD robomaster+final.pdf
+[2025-05-08 20:46:24] [INFO] [FileManager] Sending file: robomaster final.pdf
+[2025-05-08 20:46:24] [INFO] [FileManager] Sending file size: 1534350 bytes
+[2025-05-08 20:46:24] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-08 20:46:24] [INFO] [FileManager] File sent successfully: robomaster final.pdf
+[2025-05-08 20:46:24] [INFO] [DBLogger] Logged: Mohan DOWNLOAD robomaster+final.pdf
+[2025-05-08 20:46:24] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
+[2025-05-08 20:46:24] [INFO] [MainServer] Connection closed. Active connections: 2
+[2025-05-08 20:46:32] [INFO] [MainServer] New connection accepted from: /127.0.0.1:54920 (Active connections: 3)
+[2025-05-08 20:46:32] [INFO] [ClientHandler] New client connected: /127.0.0.1:54920
+[2025-05-08 20:46:32] [INFO] [ClientHandler] Mohan_download issued command: DOWNLOAD photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:46:32] [INFO] [FileManager] Sending file: photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:46:32] [INFO] [FileManager] Sending file size: 81568 bytes
+[2025-05-08 20:46:32] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-08 20:46:32] [INFO] [FileManager] File sent successfully: photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:46:32] [INFO] [DBLogger] Logged: Mohan DOWNLOAD photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:46:38] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_download
+[2025-05-08 20:46:38] [INFO] [MainServer] Connection closed. Active connections: 2
+[2025-05-08 20:46:45] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-08 20:47:25] [INFO] [ClientHandler] Mohan issued command: DELETE robomaster final.pdf
+[2025-05-08 20:47:25] [WARNING] [FileManager] File not found for deletion: robomaster
+[2025-05-08 20:47:30] [ERROR] [ClientHandler] Connection lost with MOMO: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.ClientHandler.processCommands(ClientHandler.java:149)
+	at network.ClientHandler.run(ClientHandler.java:103)
+	at MainServer.lambda$main$1(MainServer.java:123)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-08 20:47:30] [INFO] [ClientHandler] All resources cleaned up for client: MOMO
+[2025-05-08 20:47:30] [INFO] [Broadcaster] Unregistered client: MOMO
+[2025-05-08 20:47:30] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has left the server. (excluding none) to 1 clients
+[2025-05-08 20:47:30] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-08 20:47:41] [ERROR] [Client] Connection lost: An established connection was aborted by the software in your host machine
+java.net.SocketException: An established connection was aborted by the software in your host machine
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:330)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.Client.readServerResponse(Client.java:600)
+	at network.Client.handleListCommand(Client.java:285)
+	at network.Client.processUserCommands(Client.java:188)
+	at network.Client.main(Client.java:117)
+
+[2025-05-08 20:47:41] [INFO] [Logger] Logging system shutting down
+[2025-05-08 20:47:48] [INFO] [Logger] Logging system shutting down
+[2025-05-08 20:47:48] [INFO] [Logger] Logging system shutting down
+[2025-05-08 20:47:48] [INFO] [MainServer] Server shutting down...
+[2025-05-08 20:56:07] [INFO] [Logger] Logging system initialized
+[2025-05-08 20:56:07] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 20:56:07] [INFO] [MainServer] Initializing server...
+[2025-05-08 20:56:07] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 20:56:07] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 20:56:07] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 20:56:07] [INFO] [MainServer] Server started successfully
+[2025-05-08 20:56:13] [INFO] [Logger] Logging system initialized
+[2025-05-08 20:56:13] [INFO] [Client] Starting client...
+[2025-05-08 20:56:13] [INFO] [MainServer] New connection accepted from: /127.0.0.1:54959 (Active connections: 1)
+[2025-05-08 20:56:13] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 20:56:13] [INFO] [FileManager] FileManager initialized
+[2025-05-08 20:56:13] [INFO] [FileManager] Verifying database tables
+[2025-05-08 20:56:13] [INFO] [FileManager] Database tables verified
+[2025-05-08 20:56:13] [INFO] [ClientHandler] New client connected: /127.0.0.1:54959
+[2025-05-08 20:56:16] [INFO] [Logger] Logging system initialized
+[2025-05-08 20:56:16] [INFO] [Client] Starting client...
+[2025-05-08 20:56:16] [INFO] [MainServer] New connection accepted from: /127.0.0.1:54963 (Active connections: 2)
+[2025-05-08 20:56:16] [INFO] [ClientHandler] New client connected: /127.0.0.1:54963
+[2025-05-08 20:56:16] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 20:56:19] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-08 20:56:19] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-08 20:56:21] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-08 20:56:21] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has joined the server. (excluding MOMO) to 1 clients
+[2025-05-08 20:56:32] [INFO] [MainServer] New connection accepted from: /127.0.0.1:54965 (Active connections: 3)
+[2025-05-08 20:56:32] [INFO] [ClientHandler] New client connected: /127.0.0.1:54965
+[2025-05-08 20:56:32] [INFO] [ClientHandler] Mohan_upload issued command: UPLOAD Sublease_Agreement_Mohan_Lu_343Gold_Apt3018_Jun10-Aug20_2024.docx
+[2025-05-08 20:56:32] [INFO] [FileManager] Starting file reception for: Sublease_Agreement_Mohan_Lu_343Gold_Apt3018_Jun10-Aug20_2024.docx
+[2025-05-08 20:56:32] [INFO] [FileManager] Receiving file: Sublease_Agreement_Mohan_Lu_343Gold_Apt3018_Jun10-Aug20_2024.docx
+[2025-05-08 20:56:32] [INFO] [FileManager] File size reported: 32159 bytes
+[2025-05-08 20:56:32] [INFO] [FileManager] Checksum length: 32
+[2025-05-08 20:56:32] [INFO] [FileManager] Checksum received
+[2025-05-08 20:56:32] [INFO] [FileManager] Starting file data transfer
+[2025-05-08 20:56:32] [INFO] [FileManager] File data transfer complete
+[2025-05-08 20:56:32] [INFO] [FileManager] Checksum verification successful
+[2025-05-08 20:56:32] [INFO] [FileManager] File saved to database: Sublease_Agreement_Mohan_Lu_343Gold_Apt3018_Jun10-Aug20_2024.docx
+[2025-05-08 20:56:32] [INFO] [FileManager] File received successfully: Sublease_Agreement_Mohan_Lu_343Gold_Apt3018_Jun10-Aug20_2024.docx
+[2025-05-08 20:56:32] [INFO] [DBLogger] Initializing database logger - tables should be already created
+[2025-05-08 20:56:32] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-08 20:56:32] [INFO] [DBLogger] Logged: Mohan UPLOAD Sublease_Agreement_Mohan_Lu_343Gold_Apt3018_Jun10-Aug20_2024.docx
+[2025-05-08 20:56:32] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan uploaded file: Sublease_Agreement_Mohan_Lu_343Gold_Apt3018_Jun10-Aug20_2024.docx (excluding none) to 2 clients
+[2025-05-08 20:56:32] [INFO] [ClientHandler] All resources cleaned up for client: Mohan_upload
+[2025-05-08 20:56:32] [INFO] [MainServer] Connection closed. Active connections: 2
+[2025-05-08 20:56:51] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-08 20:56:57] [INFO] [ClientHandler] Mohan issued command: DELETE photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:56:57] [INFO] [FileManager] File deleted successfully: photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:56:57] [INFO] [DBLogger] Logged: Mohan DELETE photo_2025-05-07_16-23-21.jpg
+[2025-05-08 20:56:57] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan deleted file: photo_2025-05-07_16-23-21.jpg (excluding none) to 2 clients
+[2025-05-08 20:57:02] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-08 20:57:29] [INFO] [ClientHandler] Mohan issued command: LOGS 10
+[2025-05-08 20:57:29] [INFO] [DBLogger] Retrieved 10 log entries
+[2025-05-08 20:58:21] [ERROR] [ClientHandler] Connection lost with MOMO: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.ClientHandler.processCommands(ClientHandler.java:150)
+	at network.ClientHandler.run(ClientHandler.java:104)
+	at MainServer.lambda$main$1(MainServer.java:123)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-08 20:58:21] [INFO] [ClientHandler] All resources cleaned up for client: MOMO
+[2025-05-08 20:58:21] [INFO] [Broadcaster] Unregistered client: MOMO
+[2025-05-08 20:58:21] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has left the server. (excluding none) to 1 clients
+[2025-05-08 20:58:21] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-08 20:59:24] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-08 20:59:29] [ERROR] [Client] Connection lost: An established connection was aborted by the software in your host machine
+java.net.SocketException: An established connection was aborted by the software in your host machine
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:330)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.Client.readServerResponse(Client.java:668)
+	at network.Client.handleListCommand(Client.java:353)
+	at network.Client.processUserCommands(Client.java:242)
+	at network.Client.main(Client.java:121)
+
+[2025-05-08 21:01:24] [ERROR] [ClientHandler] Connection lost with Mohan: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.ClientHandler.processCommands(ClientHandler.java:150)
+	at network.ClientHandler.run(ClientHandler.java:104)
+	at MainServer.lambda$main$1(MainServer.java:123)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-08 21:01:24] [INFO] [ClientHandler] All resources cleaned up for client: Mohan
+[2025-05-08 21:01:24] [INFO] [Broadcaster] Unregistered client: Mohan
+[2025-05-08 21:01:24] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has left the server. (excluding none) to 0 clients
+[2025-05-08 21:01:24] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-08 21:07:43] [INFO] [Logger] Logging system shutting down
+[2025-05-08 21:07:43] [INFO] [Logger] Logging system shutting down
+[2025-05-08 21:07:43] [INFO] [MainServer] Server shutting down...
+[2025-05-08 21:07:43] [INFO] [Logger] Logging system shutting down
+[2025-05-08 21:07:50] [INFO] [Logger] Logging system initialized
+[2025-05-08 21:07:50] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 21:07:50] [INFO] [MainServer] Initializing server...
+[2025-05-08 21:07:50] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 21:07:50] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 21:07:50] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 21:07:50] [INFO] [MainServer] Server started successfully
+[2025-05-08 21:07:53] [INFO] [Logger] Logging system initialized
+[2025-05-08 21:07:53] [INFO] [Client] Starting client...
+[2025-05-08 21:07:53] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55250 (Active connections: 1)
+[2025-05-08 21:07:53] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 21:07:53] [INFO] [FileManager] FileManager initialized
+[2025-05-08 21:07:53] [INFO] [FileManager] Verifying database tables
+[2025-05-08 21:07:53] [INFO] [FileManager] Database tables verified
+[2025-05-08 21:07:53] [INFO] [ClientHandler] New client connected: /127.0.0.1:55250
+[2025-05-08 21:07:56] [INFO] [Broadcaster] Registered client: MOhan
+[2025-05-08 21:07:56] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOhan has joined the server. (excluding MOhan) to 0 clients
+[2025-05-08 21:07:58] [INFO] [Logger] Logging system initialized
+[2025-05-08 21:07:58] [INFO] [Client] Starting client...
+[2025-05-08 21:07:58] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55254 (Active connections: 2)
+[2025-05-08 21:07:58] [INFO] [ClientHandler] New client connected: /127.0.0.1:55254
+[2025-05-08 21:07:58] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 21:08:00] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-08 21:08:00] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has joined the server. (excluding MOMO) to 1 clients
+[2025-05-08 21:09:56] [ERROR] [ClientHandler] Connection lost with MOhan: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.ClientHandler.processCommands(ClientHandler.java:150)
+	at network.ClientHandler.run(ClientHandler.java:104)
+	at MainServer.lambda$main$1(MainServer.java:123)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-08 21:09:56] [INFO] [ClientHandler] All resources cleaned up for client: MOhan
+[2025-05-08 21:09:56] [INFO] [Broadcaster] Unregistered client: MOhan
+[2025-05-08 21:09:56] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOhan has left the server. (excluding none) to 1 clients
+[2025-05-08 21:09:56] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-08 21:10:00] [ERROR] [ClientHandler] Connection lost with MOMO: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.ClientHandler.processCommands(ClientHandler.java:150)
+	at network.ClientHandler.run(ClientHandler.java:104)
+	at MainServer.lambda$main$1(MainServer.java:123)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-08 21:10:00] [INFO] [ClientHandler] All resources cleaned up for client: MOMO
+[2025-05-08 21:10:00] [INFO] [Broadcaster] Unregistered client: MOMO
+[2025-05-08 21:10:00] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has left the server. (excluding none) to 0 clients
+[2025-05-08 21:10:00] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-08 21:11:24] [INFO] [Logger] Logging system shutting down
+[2025-05-08 21:13:39] [INFO] [Logger] Logging system shutting down
+[2025-05-08 21:13:39] [INFO] [MainServer] Server shutting down...
+[2025-05-08 21:13:39] [INFO] [Logger] Logging system shutting down
+[2025-05-08 21:13:49] [INFO] [Logger] Logging system initialized
+[2025-05-08 21:13:49] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 21:13:49] [INFO] [MainServer] Initializing server...
+[2025-05-08 21:13:49] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 21:13:49] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 21:13:49] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 21:13:49] [INFO] [MainServer] Server started successfully
+[2025-05-08 21:13:58] [INFO] [Logger] Logging system initialized
+[2025-05-08 21:13:58] [INFO] [Client] Starting client...
+[2025-05-08 21:13:58] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55453 (Active connections: 1)
+[2025-05-08 21:13:58] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 21:13:58] [INFO] [FileManager] FileManager initialized
+[2025-05-08 21:13:58] [INFO] [FileManager] Verifying database tables
+[2025-05-08 21:13:58] [INFO] [FileManager] Database tables verified
+[2025-05-08 21:13:58] [INFO] [ClientHandler] New client connected: /127.0.0.1:55453
+[2025-05-08 21:14:00] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-08 21:14:00] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-08 21:16:00] [ERROR] [ClientHandler] Connection lost with Mohan: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.ClientHandler.processCommands(ClientHandler.java:150)
+	at network.ClientHandler.run(ClientHandler.java:104)
+	at MainServer.lambda$main$1(MainServer.java:123)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-08 21:16:00] [INFO] [ClientHandler] All resources cleaned up for client: Mohan
+[2025-05-08 21:16:00] [INFO] [Broadcaster] Unregistered client: Mohan
+[2025-05-08 21:16:00] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has left the server. (excluding none) to 0 clients
+[2025-05-08 21:16:00] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-08 21:17:18] [INFO] [Logger] Logging system initialized
+[2025-05-08 21:17:18] [INFO] [Client] Starting client...
+[2025-05-08 21:17:18] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55514 (Active connections: 1)
+[2025-05-08 21:17:18] [INFO] [ClientHandler] New client connected: /127.0.0.1:55514
+[2025-05-08 21:17:18] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 21:17:21] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-08 21:17:21] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has joined the server. (excluding MOMO) to 0 clients
+[2025-05-08 21:19:21] [ERROR] [ClientHandler] Connection lost with MOMO: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.ClientHandler.processCommands(ClientHandler.java:150)
+	at network.ClientHandler.run(ClientHandler.java:104)
+	at MainServer.lambda$main$1(MainServer.java:123)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-08 21:19:21] [INFO] [ClientHandler] All resources cleaned up for client: MOMO
+[2025-05-08 21:19:21] [INFO] [Broadcaster] Unregistered client: MOMO
+[2025-05-08 21:19:21] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has left the server. (excluding none) to 0 clients
+[2025-05-08 21:19:21] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-08 21:20:14] [INFO] [Logger] Logging system shutting down
+[2025-05-08 21:20:14] [INFO] [MainServer] Server shutting down...
+[2025-05-08 21:20:14] [INFO] [Logger] Logging system shutting down
+[2025-05-08 21:20:14] [INFO] [Logger] Logging system shutting down
+[2025-05-08 22:38:15] [INFO] [Logger] Logging system initialized
+[2025-05-08 22:38:15] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 22:38:15] [INFO] [MainServer] Initializing server...
+[2025-05-08 22:38:15] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 22:38:15] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 22:38:15] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 22:38:15] [INFO] [MainServer] Server started successfully
+[2025-05-08 22:38:20] [INFO] [Logger] Logging system initialized
+[2025-05-08 22:38:20] [INFO] [Client] Starting client...
+[2025-05-08 22:38:20] [INFO] [MainServer] New connection accepted from: /127.0.0.1:57062 (Active connections: 1)
+[2025-05-08 22:38:20] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 22:38:20] [INFO] [FileManager] FileManager initialized
+[2025-05-08 22:38:20] [INFO] [FileManager] Verifying database tables
+[2025-05-08 22:38:20] [INFO] [FileManager] Database tables verified
+[2025-05-08 22:38:20] [INFO] [ClientHandler] New client connected: /127.0.0.1:57062
+[2025-05-08 22:38:23] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-08 22:38:23] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-08 22:38:26] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-08 22:38:27] [INFO] [ClientHandler] Mohan issued command: LOGS 10
+[2025-05-08 22:38:27] [INFO] [DBLogger] Initializing database logger - tables should be already created
+[2025-05-08 22:38:27] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-08 22:38:27] [INFO] [DBLogger] Retrieved 10 log entries

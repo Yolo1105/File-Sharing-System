@@ -28,6 +28,7 @@ public class Config {
     public static final class Protocol {
         public static final String CMD_UPLOAD = "UPLOAD";
         public static final String CMD_DOWNLOAD = "DOWNLOAD";
+        public static final String CMD_DELETE = "DELETE";
         public static final String CMD_LIST = "LIST";
         public static final String CMD_LOGS = "LOGS";
         public static final String RESPONSE_END_MARKER = "*END*";

@@ -8,7 +8,8 @@ import logs.DBLogger;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.StringTokenizer;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 import service.FileManager;
 import config.Config;
@@ -42,6 +43,7 @@ public class ClientHandler implements Runnable {
     // Command constants
     private static final String CMD_UPLOAD = Config.Protocol.CMD_UPLOAD;
     private static final String CMD_DOWNLOAD = Config.Protocol.CMD_DOWNLOAD;
+    private static final String CMD_DELETE = Config.Protocol.CMD_DELETE;
     private static final String CMD_LIST = Config.Protocol.CMD_LIST;
     private static final String CMD_LOGS = Config.Protocol.CMD_LOGS;
     private static final String CLIENT_ID_PREFIX = Config.Protocol.CLIENT_ID_PREFIX;
@@ -53,12 +55,15 @@ public class ClientHandler implements Runnable {
     private static final String ERR_FILE_TOO_LARGE = "ERROR: File exceeds maximum size limit of 10MB";
     private static final String ERR_UPLOAD_FAILED = "ERROR: Upload failed: %s";
     private static final String ERR_DOWNLOAD_FAILED = "ERROR: Failed to send file: %s";
-    private static final String ERR_UNKNOWN_COMMAND = "Unknown command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, LIST, LOGS [count]";
+    private static final String ERR_UNKNOWN_COMMAND = "Unknown command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, DELETE <filename>, LIST, LOGS [count]";
     private static final String ERR_COMMAND_FAILED = "ERROR: Command execution failed: %s";
+    private static final String ERR_DELETE_FAILED = "ERROR: Delete failed: %s";
 
     // Success messages
     private static final String SUCCESS_UPLOAD = "Upload successful to database.";
     private static final String SUCCESS_DOWNLOAD = "Download completed successfully";
+    private static final String SUCCESS_DELETE = "File '%s' was successfully deleted from the server.";
+
 
     // Static initialization
     static {
@@ -125,7 +130,7 @@ public class ClientHandler implements Runnable {
                     broadcaster.register(clientName, writer);
                 }
 
-                writer.write("You can now use: UPLOAD <filename>, DOWNLOAD <filename>, LIST, LOGS [count]\n");
+                writer.write("You can now use: UPLOAD <filename>, DOWNLOAD <filename>, DELETE <filename>, LIST, LOGS [count]\n");
                 writer.flush();
                 return true;
             } else {
@@ -145,19 +150,26 @@ public class ClientHandler implements Runnable {
         while (running && (line = reader.readLine()) != null) {
             logger.log(Logger.Level.INFO, "ClientHandler", clientName + " issued command: " + line);
 
-            StringTokenizer tokenizer = new StringTokenizer(line);
-            if (!tokenizer.hasMoreTokens()) continue;
+            // Get the first word as the command
+            String command;
+            String remainder = "";
 
-            String command = tokenizer.nextToken().toUpperCase();
+            int spaceIndex = line.indexOf(' ');
+            if (spaceIndex == -1) {
+                command = line.toUpperCase();
+            } else {
+                command = line.substring(0, spaceIndex).toUpperCase();
+                remainder = line.substring(spaceIndex + 1);
+            }
 
             try {
                 switch (command) {
                     case CMD_UPLOAD:
-                        handleUpload(tokenizer);
+                        handleUpload(remainder);
                         break;
 
                     case CMD_DOWNLOAD:
-                        handleDownload(tokenizer);
+                        handleDownload(remainder);
                         break;
 
                     case CMD_LIST:
@@ -165,7 +177,11 @@ public class ClientHandler implements Runnable {
                         break;
 
                     case CMD_LOGS:
-                        handleLogs(tokenizer);
+                        handleLogs(remainder);
+                        break;
+
+                    case CMD_DELETE:
+                        handleDelete(remainder);
                         break;
 
                     default:
@@ -188,14 +204,12 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void handleUpload(StringTokenizer tokenizer) throws IOException {
-        if (!tokenizer.hasMoreTokens()) {
+    private void handleUpload(String uploadFilename) throws IOException {
+        if (uploadFilename == null || uploadFilename.trim().isEmpty()) {
             writer.write(String.format(ERR_MISSING_FILENAME, "UPLOAD") + "\n");
             writer.flush();
             return;
         }
-
-        String uploadFilename = tokenizer.nextToken();
 
         // Check for blocked file types
         if (FileValidationUtils.isBlockedFileType(uploadFilename)) {
@@ -228,13 +242,11 @@ public class ClientHandler implements Runnable {
             writer.write(SUCCESS_UPLOAD + "\n");
             writer.flush();
 
-            // Only broadcast notifications for regular clients, not special connections
+            // Get the base client name (without _upload suffix)
             String baseClientName = getBaseClientName();
 
-            // Use the improved broadcaster method for file upload notifications
-            if (!Config.isUtilityConnection(clientName)) {
-                broadcaster.broadcastFileUpload(baseClientName, uploadFilename);
-            }
+            // Use the broadcaster method for file upload notifications
+            broadcaster.broadcastFileUpload(baseClientName, uploadFilename);
 
             // Reset timeout to normal
             SocketHandler.configureStandardSocket(socket);
@@ -248,14 +260,12 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void handleDownload(StringTokenizer tokenizer) throws IOException {
-        if (!tokenizer.hasMoreTokens()) {
+    private void handleDownload(String downloadFilename) throws IOException {
+        if (downloadFilename == null || downloadFilename.trim().isEmpty()) {
             writer.write(String.format(ERR_MISSING_FILENAME, "DOWNLOAD") + "\n");
             writer.flush();
             return;
         }
-
-        String downloadFilename = tokenizer.nextToken();
 
         // Check for blocked file types
         if (FileValidationUtils.isBlockedFileType(downloadFilename)) {
@@ -284,13 +294,11 @@ public class ClientHandler implements Runnable {
             writer.write(SUCCESS_DOWNLOAD + "\n");
             writer.flush();
 
-            // Only broadcast notifications for regular clients, not special connections
+            // Get the base client name (without _download suffix)
             String baseClientName = getBaseClientName();
 
-            // Use the improved broadcaster method for file download notifications
-            if (!Config.isUtilityConnection(clientName)) {
-                broadcaster.broadcastFileDownload(baseClientName, downloadFilename);
-            }
+            // Use the broadcaster method for file download notifications
+            broadcaster.broadcastFileDownload(baseClientName, downloadFilename);
 
             // Reset timeout to normal
             SocketHandler.configureStandardSocket(socket);
@@ -301,6 +309,49 @@ public class ClientHandler implements Runnable {
 
             // Reset timeout to normal
             SocketHandler.configureStandardSocket(socket);
+        }
+    }
+
+    private void handleDelete(String deleteFilename) throws IOException {
+        if (deleteFilename == null || deleteFilename.trim().isEmpty()) {
+            writer.write(String.format(ERR_MISSING_FILENAME, "DELETE") + "\n");
+            writer.flush();
+            return;
+        }
+
+        try {
+            // URL decode the filename (since it might have been URL-encoded by the client)
+            String decodedFilename = URLDecoder.decode(deleteFilename, StandardCharsets.UTF_8.toString());
+
+            // Delete the file
+            boolean deleted = fileManager.deleteFile(decodedFilename);
+
+            if (deleted) {
+                // Log the successful deletion
+                DBLogger.log(clientName, "DELETE", decodedFilename);
+
+                // Send success response
+                writer.write(String.format(SUCCESS_DELETE, decodedFilename) + "\n");
+                writer.flush();
+
+                // Get the base client name (without any suffix)
+                String baseClientName = getBaseClientName();
+
+                // Use the broadcaster for file deletion notifications
+                broadcaster.broadcastFileDeletion(baseClientName, decodedFilename);
+            } else {
+                // File not found
+                writer.write(String.format(ERR_DELETE_FAILED, "File not found: " + decodedFilename) + "\n");
+                writer.flush();
+            }
+        } catch (UnsupportedEncodingException e) {
+            logger.log(Logger.Level.ERROR, "ClientHandler", "Failed to decode filename: " + e.getMessage(), e);
+            writer.write(String.format(ERR_DELETE_FAILED, "Invalid filename encoding") + "\n");
+            writer.flush();
+        } catch (RuntimeException e) {
+            logger.log(Logger.Level.ERROR, "ClientHandler", "Delete failed: " + e.getMessage(), e);
+            writer.write(String.format(ERR_DELETE_FAILED, e.getMessage()) + "\n");
+            writer.flush();
         }
     }
 
@@ -318,14 +369,14 @@ public class ClientHandler implements Runnable {
         writer.flush();
     }
 
-    private void handleLogs(StringTokenizer tokenizer) throws IOException {
+    private void handleLogs(String params) throws IOException {
         // Default number of logs to show
         int logCount = 10;
 
         // Check if user specified a count
-        if (tokenizer.hasMoreTokens()) {
+        if (params != null && !params.trim().isEmpty()) {
             try {
-                logCount = Integer.parseInt(tokenizer.nextToken());
+                logCount = Integer.parseInt(params.trim());
                 // Enforce reasonable limits
                 if (logCount < 1) logCount = 1;
                 if (logCount > 100) logCount = 100;
