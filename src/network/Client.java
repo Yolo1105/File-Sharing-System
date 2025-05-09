@@ -13,12 +13,16 @@ import java.util.Scanner;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import utils.ResourceUtils;
 import config.Config;
+
+import static config.Config.ErrorMessages.ERR_CONNECTION_LOST;
+import static config.Config.ErrorMessages.ERR_TIMEOUT;
 
 public class Client {
     private static final Logger logger = Logger.getInstance();
 
-    // Configuration values
+    // Configuration values from Config class
     private static final int BUFFER_SIZE = Config.getBufferSize();
     private static final int SOCKET_TIMEOUT = Config.getSocketTimeout();
     private static final int FILE_TRANSFER_TIMEOUT = Config.getFileTransferTimeout();
@@ -34,82 +38,47 @@ public class Client {
     private static final String NOTIFICATION_PREFIX = Config.Protocol.NOTIFICATION_PREFIX;
     private static final String RESPONSE_END_MARKER = Config.Protocol.RESPONSE_END_MARKER;
 
-    // Error messages
-    private static final String ERR_TIMEOUT = "Connection timed out: %s";
-    private static final String ERR_CONNECTION_LOST = "Connection lost: %s";
-    private static final String ERR_CONNECTION_ERROR = "Connection error: %s";
-    private static final String ERR_MISSING_FILENAME = "Missing filename for %s command.";
-    private static final String ERR_FILE_NOT_FOUND = "File not found: %s";
-    private static final String ERR_BLOCKED_FILE_TYPE = "This file type is not allowed for security reasons.";
-    private static final String ERR_FILE_TOO_LARGE = "File exceeds maximum size limit of 10MB.";
-    private static final String ERR_ENCODE_FILENAME = "Failed to encode filename: %s";
-    private static final String ERR_UPLOAD_FAILED = "Upload failed: %s";
-    private static final String ERR_DOWNLOAD_FAILED = "Download failed: %s";
-    private static final String ERR_INVALID_FILESIZE = "Invalid file size reported: %s";
-    private static final String ERR_INVALID_CHECKSUM = "Invalid checksum length: %s";
-    private static final String ERR_EOF_DOWNLOAD = "Unexpected end of file during download";
-    private static final String ERR_CORRUPTED = "Downloaded file is corrupted. Checksum verification failed.";
-    private static final String ERR_SAVE_FAILED = "Failed to save downloaded file";
-    private static final String ERR_SERVER_TIMEOUT = "Server response timeout. Try again or check server connection.";
-    private static final String ERR_INVALID_COMMAND = "Invalid command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, DELETE <filename>, LIST, LOGS [count]";
-    private static final String ERR_DELETE_FAILED = "ERROR: Delete failed: %s";
-
-    // Info messages
-    private static final String INFO_COMMAND_USAGE = "Usage: %s <filepath> or %s \"<filepath with spaces>\"";
-    private static final String INFO_STARTING = "Starting client...";
-    private static final String INFO_CONNECTED = "Connected to server at %s:%d";
-    private static final String INFO_PROCESSING = "Processing %s command for: %s";
-    private static final String INFO_PREPARING = "Preparing to upload: %s (%d bytes)";
-    private static final String INFO_PROGRESS = "%s progress: %d%%";
-    private static final String INFO_COMPLETED = "%s completed.";
-    private static final String INFO_RECEIVING = "Receiving file: %s (%d bytes)";
-    private static final String INFO_DOWNLOAD_SAVED = "Downloaded %s to folder: downloads/";
-    private static final String INFO_FILE_PATH = "File saved to: %s";
-    private static final String INFO_REQUEST_LIST = "Requesting file list from server...";
-    private static final String INFO_REQUEST_LOGS = "Requesting %d recent logs from server...";
-    private static final String SUCCESS_UPLOADED = "File '%s' was successfully uploaded to the server database.";
-    private static final String INFO_DELETE_PROCESSING = "Processing delete request for: %s";
-    private static final String SUCCESS_DELETED = "File '%s' was successfully deleted from the server.";
-    private static final String CONNECTION_CLOSED = "Connection to server has been closed. Press Enter to exit.";
-
     private static final String PROMPT = "> ";
-    private static final String DOWNLOADS_DIR = "downloads/";
+    private static final String DOWNLOADS_DIR = Config.getDownloadsDir();
+    private static final String CONNECTION_CLOSED = "Connection to server has been closed. Press Enter to exit.";
     private static volatile boolean connectionActive = true;
 
     public static void main(String[] args) {
-        logger.log(Logger.Level.INFO, "Client", INFO_STARTING);
+//        logger.log(Logger.Level.INFO, "Client", INFO_STARTING);
 
         String serverHost = Config.getServerHost();
         int serverPort = Config.getServerPort();
         Socket socket = null;
+        BufferedReader reader = null;
+        BufferedWriter writer = null;
 
         try {
             socket = new Socket(serverHost, serverPort);
             SocketHandler.configureStandardSocket(socket);
 
-            System.out.println(String.format(INFO_CONNECTED, serverHost, serverPort));
-            logger.log(Logger.Level.INFO, "Client", String.format(INFO_CONNECTED, serverHost, serverPort));
+//            System.out.println(String.format(INFO_CONNECTED, serverHost, serverPort));
+//            logger.log(Logger.Level.INFO, "Client", String.format(INFO_CONNECTED, serverHost, serverPort));
 
-            BufferedReader reader = new BufferedReader(
+            reader = new BufferedReader(
                     new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-            BufferedWriter writer = new BufferedWriter(
+            writer = new BufferedWriter(
                     new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
 
             String welcomeMessage = reader.readLine();
             System.out.println(welcomeMessage);
 
-            Scanner scanner = new Scanner(System.in);
-            System.out.print("Enter your client name: ");
-            String clientName = scanner.nextLine().trim();
-            writer.write(CLIENT_ID_PREFIX + clientName + "\n");
-            writer.flush();
+            try (Scanner scanner = new Scanner(System.in)) {
+                System.out.print("Enter your client name: ");
+                String clientName = scanner.nextLine().trim();
+                writer.write(CLIENT_ID_PREFIX + clientName + "\n");
+                writer.flush();
 
-            String response = reader.readLine();
-            System.out.println(response);
+                String response = reader.readLine();
+                System.out.println(response);
 
-            Thread notificationThread = startNotificationListener(reader, socket);
-            processUserCommands(scanner, writer, reader, serverHost, serverPort, clientName, socket);
-
+                Thread notificationThread = startNotificationListener(reader, socket);
+                processUserCommands(scanner, writer, reader, serverHost, serverPort, clientName, socket);
+            }
         } catch (SocketTimeoutException e) {
             System.out.println(String.format(ERR_TIMEOUT, e.getMessage()));
             logger.log(Logger.Level.ERROR, "Client", "Connection timed out", e);
@@ -118,17 +87,13 @@ public class Client {
             logger.log(Logger.Level.ERROR, "Client", "Connection lost", e);
         } catch (IOException e) {
             logger.log(Logger.Level.FATAL, "Client", "Connection error", e);
-            System.out.println(String.format(ERR_CONNECTION_ERROR, e.getMessage()));
+            System.out.println(String.format("Connection error: %s", e.getMessage()));
             e.printStackTrace();
         } finally {
             connectionActive = false;
-            if (socket != null && !socket.isClosed()) {
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    // Ignore close errors
-                }
-            }
+            ResourceUtils.safeCloseAll(logger, reader, writer);
+            ResourceUtils.safeClose(socket, "client socket", logger);
+
             System.out.println(CONNECTION_CLOSED);
             try {
                 System.in.read();
@@ -252,7 +217,7 @@ public class Client {
                         if (!isConnectionActive(socket)) {
                             break;
                         }
-                        System.out.println(ERR_INVALID_COMMAND);
+                        System.out.println(Config.ErrorMessages.ERR_UNKNOWN_COMMAND);
                 }
 
                 if (!isConnectionActive(socket)) {
@@ -285,8 +250,8 @@ public class Client {
         }
 
         if (filePath.isEmpty()) {
-            System.out.println(String.format(ERR_MISSING_FILENAME, CMD_UPLOAD));
-            System.out.println(String.format(INFO_COMMAND_USAGE, CMD_UPLOAD, CMD_UPLOAD));
+            System.out.println(String.format(Config.ErrorMessages.ERR_MISSING_FILENAME, CMD_UPLOAD));
+            System.out.println(String.format(Config.InfoMessages.INFO_COMMAND_USAGE, CMD_UPLOAD, CMD_UPLOAD));
         } else {
             handleUpload(filePath, serverHost, serverPort, clientName);
         }
@@ -301,8 +266,8 @@ public class Client {
         }
 
         if (filename.isEmpty()) {
-            System.out.println(String.format(ERR_MISSING_FILENAME, CMD_DOWNLOAD));
-            System.out.println(String.format(INFO_COMMAND_USAGE, CMD_DOWNLOAD, CMD_DOWNLOAD));
+            System.out.println(String.format(Config.ErrorMessages.ERR_MISSING_FILENAME, CMD_DOWNLOAD));
+            System.out.println(String.format(Config.InfoMessages.INFO_COMMAND_USAGE, CMD_DOWNLOAD, CMD_DOWNLOAD));
         } else {
             handleDownload(filename, serverHost, serverPort, clientName);
         }
@@ -322,12 +287,12 @@ public class Client {
         }
 
         if (filename.isEmpty()) {
-            System.out.println(String.format(ERR_MISSING_FILENAME, CMD_DELETE));
-            System.out.println(String.format(INFO_COMMAND_USAGE, CMD_DELETE, CMD_DELETE));
+            System.out.println(String.format(Config.ErrorMessages.ERR_MISSING_FILENAME, CMD_DELETE));
+            System.out.println(String.format(Config.InfoMessages.INFO_COMMAND_USAGE, CMD_DELETE, CMD_DELETE));
             return;
         }
 
-        System.out.println(String.format(INFO_DELETE_PROCESSING, filename));
+        System.out.println(String.format("Processing delete request for: %s", filename));
 
         try {
             String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
@@ -343,7 +308,7 @@ public class Client {
             }
             System.out.println(response);
         } catch (IOException e) {
-            System.out.println(String.format(ERR_DELETE_FAILED, e.getMessage()));
+            System.out.println(String.format(Config.ErrorMessages.ERR_DELETE_FAILED, e.getMessage()));
             if (!socket.isConnected() || socket.isClosed()) {
                 connectionActive = false;
                 System.out.println(CONNECTION_CLOSED);
@@ -361,7 +326,7 @@ public class Client {
 
         writer.write(CMD_LIST + "\n");
         writer.flush();
-        System.out.println(INFO_REQUEST_LIST);
+        System.out.println("Requesting file list from server...");
 
         readServerResponse(socket, reader);
     }
@@ -385,18 +350,18 @@ public class Client {
 
         writer.write(CMD_LOGS + " " + logCount + "\n");
         writer.flush();
-        System.out.println(String.format(INFO_REQUEST_LOGS, logCount));
+        System.out.println(String.format("Requesting %d recent logs from server...", logCount));
 
         readServerResponse(socket, reader);
     }
 
     private static void handleUpload(String filePath, String serverHost, int serverPort, String clientName) {
-        System.out.println(String.format(INFO_PROCESSING, "UPLOAD", filePath));
+        System.out.println(String.format(Config.InfoMessages.INFO_PROCESSING, "UPLOAD", filePath));
 
         File file = new File(filePath);
 
         if (!file.exists()) {
-            System.out.println(String.format(ERR_FILE_NOT_FOUND, filePath));
+            System.out.println(String.format(Config.ErrorMessages.ERR_FILE_NOT_FOUND, filePath));
             System.out.println("Please provide a valid file path.");
             return;
         }
@@ -404,34 +369,40 @@ public class Client {
         String filename = file.getName();
 
         if (FileValidationUtils.isBlockedFileType(filename)) {
-            System.out.println(ERR_BLOCKED_FILE_TYPE);
+            System.out.println(Config.ErrorMessages.ERR_BLOCKED_FILE_TYPE);
             return;
         }
 
         long fileSize = file.length();
         if (fileSize > MAX_FILE_SIZE) {
-            System.out.println(ERR_FILE_TOO_LARGE);
+            System.out.println(Config.ErrorMessages.ERR_FILE_TOO_LARGE);
             return;
         }
 
-        System.out.println(String.format(INFO_PREPARING, filename, fileSize));
+        System.out.println(String.format(Config.InfoMessages.INFO_PREPARING, filename, fileSize));
 
         String encodedFilename;
         try {
             encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
         } catch (UnsupportedEncodingException e) {
-            System.out.println(String.format(ERR_ENCODE_FILENAME, e.getMessage()));
+            System.out.println(String.format(Config.ErrorMessages.ERR_ENCODE_FILENAME, e.getMessage()));
             return;
         }
 
-        try (Socket uploadSocket = new Socket(serverHost, serverPort)) {
+        Socket uploadSocket = null;
+        BufferedReader uploadReader = null;
+        BufferedWriter uploadWriter = null;
+        DataOutputStream uploadDataOut = null;
+
+        try {
+            uploadSocket = new Socket(serverHost, serverPort);
             SocketHandler.configureFileTransferSocket(uploadSocket);
 
-            BufferedReader uploadReader = new BufferedReader(
+            uploadReader = new BufferedReader(
                     new InputStreamReader(uploadSocket.getInputStream(), StandardCharsets.UTF_8));
-            BufferedWriter uploadWriter = new BufferedWriter(
+            uploadWriter = new BufferedWriter(
                     new OutputStreamWriter(uploadSocket.getOutputStream(), StandardCharsets.UTF_8));
-            DataOutputStream uploadDataOut = new DataOutputStream(
+            uploadDataOut = new DataOutputStream(
                     new BufferedOutputStream(uploadSocket.getOutputStream(), BUFFER_SIZE));
 
             uploadReader.readLine();
@@ -452,6 +423,7 @@ public class Client {
 
             uploadDataOut.writeLong(fileSize);
 
+            // Using the calculateChecksum utility method
             byte[] checksum = calculateChecksum(file);
             uploadDataOut.writeInt(checksum.length);
             uploadDataOut.write(checksum);
@@ -470,11 +442,11 @@ public class Client {
 
                     if (currentPercentage >= lastPercentageReported + 10) {
                         lastPercentageReported = currentPercentage;
-                        System.out.println(String.format(INFO_PROGRESS, "Upload", currentPercentage));
+                        System.out.println(String.format(Config.InfoMessages.INFO_PROGRESS, "Upload", currentPercentage));
                     }
                 }
                 uploadDataOut.flush();
-                System.out.println(String.format(INFO_COMPLETED, "File upload"));
+                System.out.println(String.format(Config.InfoMessages.INFO_COMPLETED, "File upload"));
             }
 
             try {
@@ -483,37 +455,47 @@ public class Client {
                 if (uploadResponse != null) {
                     System.out.println(uploadResponse);
                 }
-                System.out.println(String.format(SUCCESS_UPLOADED, filename));
+                System.out.println(String.format(Config.SuccessMessages.SUCCESS_UPLOAD, filename));
             } catch (SocketTimeoutException e) {
                 // Assume success if no error occurred during transfer
-                System.out.println(String.format(SUCCESS_UPLOADED, filename));
+                System.out.println(String.format(Config.SuccessMessages.SUCCESS_UPLOAD, filename));
             }
 
-            System.out.println(String.format(INFO_COMPLETED, "Upload"));
+            System.out.println(String.format(Config.InfoMessages.INFO_COMPLETED, "Upload"));
         } catch (Exception e) {
-            System.out.println(String.format(ERR_UPLOAD_FAILED, e.getMessage()));
+            System.out.println(String.format(Config.ErrorMessages.ERR_UPLOAD_FAILED, e.getMessage()));
+        } finally {
+            // Use ResourceUtils for safe closing
+            ResourceUtils.safeCloseAll(logger, uploadReader, uploadWriter, uploadDataOut);
+            ResourceUtils.safeClose(uploadSocket, "upload socket", logger);
         }
     }
 
     private static void handleDownload(String filename, String serverHost, int serverPort, String clientName) {
-        System.out.println(String.format(INFO_PROCESSING, "DOWNLOAD", filename));
+        System.out.println(String.format(Config.InfoMessages.INFO_PROCESSING, "DOWNLOAD", filename));
 
         String encodedFilename;
         try {
             encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
         } catch (UnsupportedEncodingException e) {
-            System.out.println(String.format(ERR_ENCODE_FILENAME, e.getMessage()));
+            System.out.println(String.format(Config.ErrorMessages.ERR_ENCODE_FILENAME, e.getMessage()));
             return;
         }
 
-        try (Socket downloadSocket = new Socket(serverHost, serverPort)) {
+        Socket downloadSocket = null;
+        BufferedReader downloadReader = null;
+        BufferedWriter downloadWriter = null;
+        DataInputStream downloadDataIn = null;
+
+        try {
+            downloadSocket = new Socket(serverHost, serverPort);
             SocketHandler.configureFileTransferSocket(downloadSocket);
 
-            BufferedReader downloadReader = new BufferedReader(
+            downloadReader = new BufferedReader(
                     new InputStreamReader(downloadSocket.getInputStream(), StandardCharsets.UTF_8));
-            BufferedWriter downloadWriter = new BufferedWriter(
+            downloadWriter = new BufferedWriter(
                     new OutputStreamWriter(downloadSocket.getOutputStream(), StandardCharsets.UTF_8));
-            DataInputStream downloadDataIn = new DataInputStream(
+            downloadDataIn = new DataInputStream(
                     new BufferedInputStream(downloadSocket.getInputStream(), BUFFER_SIZE));
 
             downloadReader.readLine();
@@ -523,7 +505,7 @@ public class Client {
 
             downloadReader.readLine();
 
-            System.out.println(String.format(INFO_PROCESSING, "download", filename));
+            System.out.println(String.format(Config.InfoMessages.INFO_PROCESSING, "download", filename));
 
             downloadWriter.write(CMD_DOWNLOAD + " " + encodedFilename + "\n");
             downloadWriter.flush();
@@ -537,21 +519,21 @@ public class Client {
             long fileSize = downloadDataIn.readLong();
 
             if (fileSize < 0) {
-                System.out.println(String.format(ERR_FILE_NOT_FOUND, filename));
+                System.out.println(String.format(Config.ErrorMessages.ERR_FILE_NOT_FOUND, filename));
                 return;
             }
 
             if (fileSize > MAX_FILE_SIZE) {
-                System.out.println(String.format(ERR_INVALID_FILESIZE, fileSize));
+                System.out.println(String.format(Config.ErrorMessages.ERR_INVALID_FILESIZE, fileSize));
                 return;
             }
 
-            System.out.println(String.format(INFO_RECEIVING, filename, fileSize));
+            System.out.println(String.format("Receiving file: %s (%d bytes)", filename, fileSize));
 
             int checksumLength = downloadDataIn.readInt();
 
             if (checksumLength <= 0 || checksumLength > 64) {
-                System.out.println(String.format(ERR_INVALID_CHECKSUM, checksumLength));
+                System.out.println(String.format(Config.ErrorMessages.ERR_INVALID_CHECKSUM, checksumLength));
                 return;
             }
 
@@ -578,7 +560,7 @@ public class Client {
                     count = downloadDataIn.read(buffer, 0, toRead);
 
                     if (count < 0) {
-                        throw new IOException(ERR_EOF_DOWNLOAD);
+                        throw new IOException("Unexpected end of file during download");
                     }
 
                     fileOut.write(buffer, 0, count);
@@ -587,7 +569,7 @@ public class Client {
                     int currentPercentage = (int)(100 * (fileSize - remaining) / (double)fileSize);
                     if (currentPercentage >= lastPercentageReported + 10) {
                         lastPercentageReported = currentPercentage;
-                        System.out.println(String.format(INFO_PROGRESS, "Download", currentPercentage));
+                        System.out.println(String.format(Config.InfoMessages.INFO_PROGRESS, "Download", currentPercentage));
                     }
                 }
                 fileOut.flush();
@@ -597,21 +579,21 @@ public class Client {
             boolean checksumMatch = MessageDigest.isEqual(expectedChecksum, actualChecksum);
 
             if (!checksumMatch) {
-                System.out.println(ERR_CORRUPTED);
-                tempFile.delete();
+                System.out.println(Config.ErrorMessages.ERR_CORRUPTED);
+                ResourceUtils.safeDelete(tempFile, logger);
             } else {
                 if (outFile.exists()) {
-                    outFile.delete();
+                    ResourceUtils.safeDelete(outFile, logger);
                 }
 
                 boolean renamed = tempFile.renameTo(outFile);
 
                 if (renamed) {
-                    System.out.println(String.format(INFO_DOWNLOAD_SAVED, filename));
-                    System.out.println(String.format(INFO_FILE_PATH, outFile.getAbsolutePath()));
+                    System.out.println(String.format("Downloaded %s to folder: downloads/", filename));
+                    System.out.println(String.format("File saved to: %s", outFile.getAbsolutePath()));
                 } else {
-                    System.out.println(ERR_SAVE_FAILED);
-                    tempFile.delete();
+                    System.out.println("Failed to save downloaded file");
+                    ResourceUtils.safeDelete(tempFile, logger);
                 }
             }
 
@@ -625,9 +607,13 @@ public class Client {
                 // It's okay if we don't get a response after download
             }
 
-            System.out.println(String.format(INFO_COMPLETED, "Download"));
+            System.out.println(String.format(Config.InfoMessages.INFO_COMPLETED, "Download"));
         } catch (Exception e) {
-            System.out.println(String.format(ERR_DOWNLOAD_FAILED, e.getMessage()));
+            System.out.println(String.format(Config.ErrorMessages.ERR_DOWNLOAD_FAILED, e.getMessage()));
+        } finally {
+            // Use ResourceUtils for safe closing
+            ResourceUtils.safeCloseAll(logger, downloadReader, downloadWriter, downloadDataIn);
+            ResourceUtils.safeClose(downloadSocket, "download socket", logger);
         }
     }
 
@@ -672,7 +658,7 @@ public class Client {
                 System.out.println("No response received from server.");
             }
         } catch (SocketTimeoutException e) {
-            System.out.println(ERR_SERVER_TIMEOUT);
+            System.out.println(Config.ErrorMessages.ERR_SERVER_TIMEOUT);
         } catch (SocketException e) {
             connectionActive = false;
             throw new IOException("Connection closed", e);

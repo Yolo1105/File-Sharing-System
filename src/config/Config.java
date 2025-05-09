@@ -26,14 +26,66 @@ public class Config {
 
     // Protocol constants for client-server communication
     public static final class Protocol {
+        // Commands
         public static final String CMD_UPLOAD = "UPLOAD";
         public static final String CMD_DOWNLOAD = "DOWNLOAD";
         public static final String CMD_DELETE = "DELETE";
         public static final String CMD_LIST = "LIST";
         public static final String CMD_LOGS = "LOGS";
+
+        // Protocol markers
         public static final String RESPONSE_END_MARKER = "*END*";
         public static final String CLIENT_ID_PREFIX = "CLIENT_ID ";
         public static final String NOTIFICATION_PREFIX = "SERVER_NOTIFICATION:";
+    }
+
+    // Error message constants
+    public static final class ErrorMessages {
+        // Common errors
+        public static final String ERR_MISSING_FILENAME = "Missing filename for %s";
+        public static final String ERR_FILE_NOT_FOUND = "File not found: %s";
+        public static final String ERR_BLOCKED_FILE_TYPE = "This file type is not allowed for security reasons";
+        public static final String ERR_FILE_TOO_LARGE = "File exceeds maximum size limit";
+        public static final String ERR_DECODE_FILENAME = "Failed to decode filename";
+        public static final String ERR_ENCODE_FILENAME = "Failed to encode filename: %s";
+
+        // Connection errors
+        public static final String ERR_CONNECTION_LOST = "Connection lost: %s";
+        public static final String ERR_TIMEOUT = "Connection timed out: %s";
+        public static final String ERR_SERVER_TIMEOUT = "Server response timeout. Try again or check server connection";
+
+        // Command errors
+        public static final String ERR_UNKNOWN_COMMAND = "Unknown command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, DELETE <filename>, LIST, LOGS [count]";
+        public static final String ERR_COMMAND_FAILED = "Command execution failed: %s";
+
+        // File operation errors
+        public static final String ERR_UPLOAD_FAILED = "Upload failed: %s";
+        public static final String ERR_DOWNLOAD_FAILED = "Download failed: %s";
+        public static final String ERR_DELETE_FAILED = "Delete failed: %s";
+        public static final String ERR_INVALID_FILESIZE = "Invalid file size reported: %s";
+        public static final String ERR_INVALID_CHECKSUM = "Invalid checksum length: %s";
+        public static final String ERR_CORRUPTED = "Downloaded file is corrupted. Checksum verification failed";
+    }
+
+    // Success message constants
+    public static final class SuccessMessages {
+        public static final String SUCCESS_UPLOAD = "Upload successful to database";
+        public static final String SUCCESS_DOWNLOAD = "Download completed successfully";
+        public static final String SUCCESS_DELETE = "File '%s' was successfully deleted from the server";
+        public static final String SUCCESS_FILE_SAVED = "File saved to database";
+        public static final String SUCCESS_FILE_RECEIVED = "File received successfully";
+        public static final String SUCCESS_FILE_DELETED = "File deleted successfully";
+    }
+
+    // Info message constants
+    public static final class InfoMessages {
+        public static final String INFO_STARTING = "Starting %s...";
+        public static final String INFO_CONNECTED = "Connected to server at %s:%d";
+        public static final String INFO_PROCESSING = "Processing %s command for: %s";
+        public static final String INFO_PREPARING = "Preparing to upload: %s (%d bytes)";
+        public static final String INFO_PROGRESS = "%s progress: %d%%";
+        public static final String INFO_COMPLETED = "%s completed";
+        public static final String INFO_COMMAND_USAGE = "Usage: %s <filepath> or %s \"<filepath with spaces>\"";
     }
 
     static {

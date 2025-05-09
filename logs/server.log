@@ -560,3 +560,45 @@ java.net.SocketTimeoutException: Read timed out
 [2025-05-08 22:38:27] [INFO] [DBLogger] Initializing database logger - tables should be already created
 [2025-05-08 22:38:27] [INFO] [DBLogger] Database logger initialized successfully
 [2025-05-08 22:38:27] [INFO] [DBLogger] Retrieved 10 log entries
+[2025-05-08 22:39:10] [INFO] [Logger] Logging system shutting down
+[2025-05-08 22:39:10] [INFO] [Logger] Logging system shutting down
+[2025-05-08 22:39:10] [INFO] [MainServer] Server shutting down...
+[2025-05-08 22:43:50] [INFO] [Logger] Logging system initialized
+[2025-05-08 22:43:50] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 22:43:50] [INFO] [MainServer] Initializing server...
+[2025-05-08 22:43:50] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 22:43:50] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 22:43:50] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 22:43:50] [INFO] [MainServer] Server started successfully
+[2025-05-08 22:43:55] [INFO] [Logger] Logging system initialized
+[2025-05-08 22:43:55] [INFO] [Client] Starting client...
+[2025-05-08 22:43:55] [INFO] [MainServer] New connection accepted from: /127.0.0.1:57224 (Active connections: 1)
+[2025-05-08 22:43:55] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 22:43:55] [INFO] [FileManager] FileManager initialized
+[2025-05-08 22:43:55] [INFO] [FileManager] Verifying database tables
+[2025-05-08 22:43:55] [INFO] [FileManager] Database tables verified
+[2025-05-08 22:43:55] [INFO] [ClientHandler] New client connected: /127.0.0.1:57224
+[2025-05-08 22:43:57] [INFO] [Logger] Logging system shutting down
+[2025-05-08 22:43:57] [INFO] [ClientHandler] Connection closed by client: Unknown
+[2025-05-08 22:43:57] [INFO] [ClientHandler] All resources cleaned up for client: Unknown
+[2025-05-08 22:43:57] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-08 22:59:11] [INFO] [MainServer] Server shutting down...
+[2025-05-08 22:59:11] [INFO] [Logger] Logging system shutting down
+[2025-05-08 22:59:18] [INFO] [Logger] Logging system initialized
+[2025-05-08 22:59:18] [INFO] [Logger] Log level set to: INFO
+[2025-05-08 22:59:18] [INFO] [MainServer] Initializing server...
+[2025-05-08 22:59:18] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-08 22:59:18] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-08 22:59:18] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-08 22:59:18] [INFO] [MainServer] Server started successfully
+[2025-05-08 22:59:21] [INFO] [Logger] Logging system initialized
+[2025-05-08 22:59:21] [INFO] [Client] Starting client...
+[2025-05-08 22:59:21] [INFO] [MainServer] New connection accepted from: /127.0.0.1:57573 (Active connections: 1)
+[2025-05-08 22:59:21] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-08 22:59:21] [INFO] [FileManager] FileManager initialized
+[2025-05-08 22:59:21] [INFO] [FileManager] Verifying database tables
+[2025-05-08 22:59:21] [INFO] [FileManager] Database tables verified
+[2025-05-08 22:59:21] [INFO] [ClientHandler] New client connected: /127.0.0.1:57573
+[2025-05-08 22:59:23] [INFO] [Logger] Logging system shutting down
+[2025-05-08 22:59:23] [INFO] [MainServer] Server shutting down...
+[2025-05-08 22:59:23] [INFO] [Logger] Logging system shutting down

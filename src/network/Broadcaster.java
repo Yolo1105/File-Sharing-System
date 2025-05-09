@@ -17,7 +17,7 @@ public class Broadcaster {
     // Maps client name to their writer stream
     private final Map<String, BufferedWriter> clientWriters = new ConcurrentHashMap<>();
 
-    // Message prefixes and formats
+    // Message prefixes and formats - use constants from Config
     private static final String NOTIFICATION_PREFIX = Config.Protocol.NOTIFICATION_PREFIX;
     private static final String JOIN_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s has joined the server.\n";
     private static final String LEAVE_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s has left the server.\n";
@@ -25,7 +25,7 @@ public class Broadcaster {
     private static final String DOWNLOAD_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s downloaded file: %s\n";
     private static final String DELETE_MESSAGE_FORMAT = NOTIFICATION_PREFIX + " %s deleted file: %s\n";
 
-    // Log messages
+    // Logging message templates
     private static final String LOG_SKIPPING_NOTIFICATION = "Skipping notification for utility connection: %s";
     private static final String LOG_REGISTERED = "Registered client: %s";
     private static final String LOG_UNREGISTERED = "Unregistered client: %s";
@@ -38,6 +38,7 @@ public class Broadcaster {
         return instance;
     }
 
+    // Use centralized utility connection check from Config
     private boolean isUtilityConnection(String clientName) {
         return Config.isUtilityConnection(clientName);
     }
@@ -117,6 +118,8 @@ public class Broadcaster {
                         failureInfo));
     }
 
+    // File action notification methods - consolidated implementation pattern
+
     public void broadcastFileUpload(String uploaderName, String filename) {
         // Skip notifications for utility connections
         if (isUtilityConnection(uploaderName)) {
@@ -143,6 +146,8 @@ public class Broadcaster {
 
         broadcast(String.format(DELETE_MESSAGE_FORMAT, deleterName, filename), null);
     }
+
+    // Utility methods for client management
 
     public int getConnectedClientsCount() {
         int count = 0;

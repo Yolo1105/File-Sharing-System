@@ -4,8 +4,12 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import database.ConnectionManager;
+import database.DatabaseConnectionPool;
 
+/**
+ * Database-backed logger for file operations. Records user actions in the database
+ * for auditing and history tracking.
+ */
 public class DBLogger {
     private static final Logger logger = Logger.getInstance();
     private static volatile boolean initialized = false;
@@ -20,6 +24,10 @@ public class DBLogger {
     private static final String ERR_LOG_FAILED = "Failed to log action";
     private static final String ERR_LOGS_FAILED = "Failed to retrieve logs";
 
+    /**
+     * Initializes the database logger if not already initialized.
+     * Checks for the existence of required tables.
+     */
     private static synchronized void initialize() {
         if (initialized || initializing) return;
 
@@ -28,10 +36,10 @@ public class DBLogger {
 
         try {
             // Just verify the table exists as a sanity check
-            boolean tableExists = ConnectionManager.queryWithConnection(conn -> {
+            boolean tableExists = DatabaseConnectionPool.queryWithConnection(conn -> {
                 try {
                     // Use the tableExists helper method from ConnectionManager instead
-                    return ConnectionManager.tableExists(conn, "logs");
+                    return DatabaseConnectionPool.tableExists(conn, "logs");
                 } catch (SQLException e) {
                     logger.log(Logger.Level.ERROR, "DBLogger", "Error checking if logs table exists", e);
                     return false;
@@ -54,6 +62,13 @@ public class DBLogger {
         }
     }
 
+    /**
+     * Logs a file operation to the database.
+     *
+     * @param client The client name that performed the action
+     * @param action The action performed (UPLOAD, DOWNLOAD, DELETE)
+     * @param filename The filename involved in the action
+     */
     public static void log(String client, String action, String filename) {
         // Initialize if needed
         if (!initialized) {
@@ -61,14 +76,7 @@ public class DBLogger {
         }
 
         // Normalize client name
-        if (client == null || client.trim().isEmpty()) {
-            client = "Unknown";
-        }
-
-        // Clean up client name by removing suffixes like _upload or _download
-        if (client.contains("_")) {
-            client = client.substring(0, client.indexOf("_"));
-        }
+        client = normalizeClientName(client);
 
         // Generate current timestamp
         String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
@@ -80,7 +88,7 @@ public class DBLogger {
         final String finalTimestamp = timestamp;
 
         try {
-            ConnectionManager.executeWithConnection(conn -> {
+            DatabaseConnectionPool.executeWithConnection(conn -> {
                 try {
                     try (PreparedStatement pstmt = conn.prepareStatement(
                             "INSERT INTO logs (client, action, filename, timestamp) VALUES (?, ?, ?, ?)")) {
@@ -105,6 +113,32 @@ public class DBLogger {
         }
     }
 
+    /**
+     * Normalizes a client name by removing utility connection suffixes.
+     *
+     * @param client The client name to normalize
+     * @return The normalized client name
+     */
+    private static String normalizeClientName(String client) {
+        // Normalize client name
+        if (client == null || client.trim().isEmpty()) {
+            return "Unknown";
+        }
+
+        // Clean up client name by removing suffixes like _upload or _download
+        if (client.contains("_")) {
+            return client.substring(0, client.indexOf("_"));
+        }
+
+        return client;
+    }
+
+    /**
+     * Retrieves recent log entries from the database.
+     *
+     * @param limit The maximum number of log entries to retrieve
+     * @return A formatted string containing the log entries
+     */
     public static String getRecentLogs(int limit) {
         // Initialize if needed
         if (!initialized) {
@@ -120,7 +154,7 @@ public class DBLogger {
         try {
             final int finalLimit = safeLimit;
 
-            ConnectionManager.executeWithConnection(conn -> {
+            DatabaseConnectionPool.executeWithConnection(conn -> {
                 try {
                     try (PreparedStatement pstmt = conn.prepareStatement(
                             "SELECT * FROM logs ORDER BY timestamp DESC LIMIT ?")) {
@@ -132,35 +166,7 @@ public class DBLogger {
 
                             while (rs.next()) {
                                 hasLogs = true;
-
-                                // Get the values from database
-                                String timestamp = rs.getString("timestamp");
-                                String client = rs.getString("client");
-                                String action = rs.getString("action");
-                                String filename = rs.getString("filename");
-
-                                // Parse timestamp and reformat to include year and date
-                                try {
-                                    LocalDateTime dateTime = LocalDateTime.parse(timestamp, TIMESTAMP_FORMAT);
-                                    String formattedTime = dateTime.format(DISPLAY_FORMAT);
-
-                                    // Clean up client name if needed
-                                    if (client.contains("_")) {
-                                        client = client.substring(0, client.indexOf("_"));
-                                    }
-
-                                    // Format the log entry with year and date included
-                                    result.append(String.format("[%s] %s %s: %s\n",
-                                            formattedTime, client, action, filename));
-
-                                } catch (Exception e) {
-                                    // If any error in formatting, fall back to original format
-                                    result.append(String.format("[%s] %s %s: %s\n",
-                                            timestamp, client, action, filename));
-
-                                    logger.log(Logger.Level.WARNING, "DBLogger",
-                                            "Error formatting log entry: " + e.getMessage());
-                                }
+                                formatLogEntry(rs, result);
                             }
 
                             if (!hasLogs) {
@@ -182,5 +188,45 @@ public class DBLogger {
         }
 
         return result.toString();
+    }
+
+    /**
+     * Formats a single log entry from the ResultSet and appends it to the StringBuilder.
+     *
+     * @param rs The ResultSet containing the log entry
+     * @param result The StringBuilder to append the formatted log entry to
+     */
+    private static void formatLogEntry(ResultSet rs, StringBuilder result) {
+        try {
+            // Get the values from database
+            String timestamp = rs.getString("timestamp");
+            String client = rs.getString("client");
+            String action = rs.getString("action");
+            String filename = rs.getString("filename");
+
+            // Parse timestamp and reformat to include year and date
+            try {
+                LocalDateTime dateTime = LocalDateTime.parse(timestamp, TIMESTAMP_FORMAT);
+                String formattedTime = dateTime.format(DISPLAY_FORMAT);
+
+                // Clean up client name if needed
+                client = normalizeClientName(client);
+
+                // Format the log entry with year and date included
+                result.append(String.format("[%s] %s %s: %s\n",
+                        formattedTime, client, action, filename));
+
+            } catch (Exception e) {
+                // If any error in formatting, fall back to original format
+                result.append(String.format("[%s] %s %s: %s\n",
+                        timestamp, client, action, filename));
+
+                logger.log(Logger.Level.WARNING, "DBLogger",
+                        "Error formatting log entry: " + e.getMessage());
+            }
+        } catch (SQLException e) {
+            logger.log(Logger.Level.ERROR, "DBLogger", "Error reading log entry: " + e.getMessage(), e);
+            result.append("Error reading log entry\n");
+        }
     }
 }

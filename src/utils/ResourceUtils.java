@@ -4,6 +4,10 @@ import java.io.*;
 import java.util.function.Consumer;
 import logs.Logger;
 
+/**
+ * Utility class for safely managing resources like streams, connections, and files.
+ * Provides methods to safely close resources and handle related exceptions.
+ */
 public class ResourceUtils {
     private static final Logger logger = Logger.getInstance();
 
@@ -182,11 +186,22 @@ public class ResourceUtils {
         return false;
     }
 
+    /**
+     * Functional interface for supplying a resource.
+     *
+     * @param <T> The type of resource
+     */
     @FunctionalInterface
     public interface ResourceSupplier<T extends AutoCloseable> {
         T get() throws Exception;
     }
 
+    /**
+     * Functional interface for performing an action with a resource.
+     *
+     * @param <T> The type of resource
+     * @param <R> The return type of the action
+     */
     @FunctionalInterface
     public interface ResourceAction<T extends AutoCloseable, R> {
         R perform(T resource) throws Exception;

@@ -3,7 +3,6 @@ package database;
 import logs.Logger;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -17,8 +16,8 @@ import java.util.function.Function;
 import utils.ResourceUtils;
 import config.Config;
 
-public class ConnectionManager {
-    private static final ConnectionManager instance = new ConnectionManager();
+public class DatabaseConnectionPool {
+    private static final DatabaseConnectionPool instance = new DatabaseConnectionPool();
     private static final Logger logger = Logger.getInstance();
     private final String dbUrl;
     private final List<Connection> connections;
@@ -28,7 +27,7 @@ public class ConnectionManager {
     private boolean initialized = false;
     private boolean databaseSchemaInitialized = false;
 
-    private ConnectionManager() {
+    private DatabaseConnectionPool() {
         System.out.println("[INIT] Initializing ConnectionPool with database URL: " + Config.getDbUrl());
 
         dbUrl = Config.getDbUrl();
@@ -50,12 +49,12 @@ public class ConnectionManager {
         }
     }
 
-    public static ConnectionManager getInstance() {
+    public static DatabaseConnectionPool getInstance() {
         return instance;
     }
 
     public static synchronized void initializeDatabaseSchema() {
-        ConnectionManager pool = getInstance();
+        DatabaseConnectionPool pool = getInstance();
 
         // Skip if already initialized
         if (pool.databaseSchemaInitialized) {
@@ -287,9 +286,12 @@ public class ConnectionManager {
         }
     }
 
-    // General database utility methods incorporated from SchemaManager
+    // UTILITY METHODS FOR DATABASE OPERATIONS
+    // Centralized to avoid duplicate implementations
+
+    // Execute a database operation that doesn't return results
     public static void executeWithConnection(Consumer<Connection> action, String logSource) throws SQLException {
-        ConnectionManager pool = getInstance();
+        DatabaseConnectionPool pool = getInstance();
         Connection conn = null;
 
         try {
@@ -303,8 +305,9 @@ public class ConnectionManager {
         }
     }
 
+    // Execute a database query that returns a result
     public static <T> T queryWithConnection(Function<Connection, T> function, T defaultValue, String logSource) {
-        ConnectionManager pool = getInstance();
+        DatabaseConnectionPool pool = getInstance();
         Connection conn = null;
 
         try {
@@ -318,6 +321,7 @@ public class ConnectionManager {
         }
     }
 
+    // Execute a query that returns a list of objects
     public static <T> List<T> queryList(String query, Function<ResultSet, T> rowMapper, String logSource) {
         return queryWithConnection(conn -> {
             List<T> results = new ArrayList<>();
@@ -333,7 +337,7 @@ public class ConnectionManager {
         }, new ArrayList<>(), logSource);
     }
 
-    // Fix for the method on line 350
+    // Execute a database transaction
     public static void executeTransaction(Consumer<Connection> transaction, String logSource) {
         try {
             executeWithConnection(conn -> {
@@ -349,8 +353,10 @@ public class ConnectionManager {
                     } catch (SQLException rollbackEx) {
                         logger.log(Logger.Level.ERROR, logSource, "Error during rollback", rollbackEx);
                     }
-                    // Handle the SQLException here instead of rethrowing it
-                    logger.log(Logger.Level.ERROR, logSource, "Transaction failed", e);
+                    // Use the standard logging pattern instead of custom handling
+                    logger.log(Logger.Level.ERROR, logSource, "Transaction failed: " + e.getMessage(), e);
+                    // Re-throw as RuntimeException to be consistent with executeWithConnection pattern
+                    throw new RuntimeException(e);
                 } finally {
                     try {
                         conn.setAutoCommit(originalAutoCommit);
@@ -360,7 +366,7 @@ public class ConnectionManager {
                 }
             }, logSource);
         } catch (SQLException e) {
-            // Handle any SQLException from executeWithConnection
+            // This catch block is now handling the exception from executeWithConnection
             logger.log(Logger.Level.ERROR, logSource, "Database operation failed in transaction", e);
         }
     }

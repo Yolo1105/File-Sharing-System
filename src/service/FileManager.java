@@ -1,6 +1,6 @@
 package service;
 
-import database.ConnectionManager;
+import database.DatabaseConnectionPool;
 import logs.Logger;
 
 import java.io.*;
@@ -94,8 +94,8 @@ public class FileManager {
             dataIn.readFully(expectedChecksum);
             logger.log(Logger.Level.INFO, "FileManager", "Checksum received");
 
-            // Sanitize filename
-            String sanitizedFileName = sanitizeFileName(fileName);
+            // Sanitize filename using FileValidationUtils
+            String sanitizedFileName = FileValidationUtils.sanitizeFileName(fileName);
 
             // Read file data into buffer
             byte[] fileContent = readFileContent(dataIn, fileSize);
@@ -154,7 +154,7 @@ public class FileManager {
 
     private void saveFileToDatabase(String fileName, byte[] content, long fileSize, byte[] checksum)
             throws SQLException {
-        ConnectionManager.executeWithConnection(conn -> {
+        DatabaseConnectionPool.executeWithConnection(conn -> {
             try {
                 // First try to delete if file exists
                 try (PreparedStatement pstmt = conn.prepareStatement("DELETE FROM files WHERE filename = ?")) {
@@ -200,8 +200,8 @@ public class FileManager {
                 return;
             }
 
-            // Sanitize the filename
-            String sanitizedFileName = sanitizeFileName(fileName);
+            // Sanitize the filename using FileValidationUtils
+            String sanitizedFileName = FileValidationUtils.sanitizeFileName(fileName);
 
             // Use buffered streams for better performance
             DataOutputStream dataOut = new DataOutputStream(
@@ -251,10 +251,10 @@ public class FileManager {
             throw new RuntimeException(ERR_DECODE_FILENAME, e);
         }
 
-        // Sanitize the filename
-        String sanitizedFileName = sanitizeFileName(fileName);
+        // Sanitize the filename using FileValidationUtils
+        String sanitizedFileName = FileValidationUtils.sanitizeFileName(fileName);
 
-        return ConnectionManager.queryWithConnection(conn -> {
+        return DatabaseConnectionPool.queryWithConnection(conn -> {
             try {
                 try (PreparedStatement pstmt = conn.prepareStatement(
                         "DELETE FROM files WHERE filename = ?")) {
@@ -290,7 +290,7 @@ public class FileManager {
     }
 
     private FileData getFileFromDatabase(String fileName) throws SQLException {
-        return ConnectionManager.queryWithConnection(conn -> {
+        return DatabaseConnectionPool.queryWithConnection(conn -> {
             try {
                 try (PreparedStatement pstmt = conn.prepareStatement(
                         "SELECT content, file_size, checksum FROM files WHERE filename = ?")) {
@@ -316,7 +316,7 @@ public class FileManager {
     }
 
     public String listFiles() {
-        return ConnectionManager.queryWithConnection(conn -> {
+        return DatabaseConnectionPool.queryWithConnection(conn -> {
             try {
                 StringBuilder sb = new StringBuilder();
                 sb.append("Available files:\n");
@@ -348,11 +348,6 @@ public class FileManager {
                 throw new RuntimeException(e); // Re-throw to be caught by queryWithConnection
             }
         }, "Error listing files. Please try again later.", "FileManager");
-    }
-
-    private String sanitizeFileName(String filename) {
-        // Replace any path-like characters with underscores
-        return filename.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
 
     private byte[] calculateChecksum(byte[] data) throws NoSuchAlgorithmException {
