@@ -49,42 +49,11 @@ server.max_threads=10
 db.url=jdbc:sqlite:file_storage.db
 ````
 
-## Project Structure
-File-Sharing-System/
-│
-├── resources/
-│   └── config.properties
-│
-├── src/
-│   ├── MainServer.java
-│   ├── config/Config.java
-│   ├── constants/Constants.java
-│   ├── database/Database.java
-│   ├── logs/Logger.java
-│   ├── logs/DBLogger.java
-│   ├── network/
-│   │   ├── Client.java
-│   │   ├── ClientHandler.java
-│   │   ├── SocketHandler.java
-│   │   └── Broadcaster.java
-│   ├── service/
-│   │   ├── FileManager.java
-│   │   └── FileValidation.java
-│   └── utils/IOProcessor.java
-│
-├── file_storage.db       ← SQLite database file (created at runtime)
-├── logs/
-│   └── server.log        ← Server runtime log
-└── README.md
-```
-
 ## Authors
-
-* Mohan Lu (ml7612)
-* Audrey Zhao (rz2536)
+Mohan Lu (ml7612)
+Audrey Zhao (rz2536)
 
 ## Course Information
-
-* **Course**: CSUY 3913 – Java Programming (Spring 2025)
-* **Requirements met**: Thread concurrency, File I/O, Networking, JDBC
-* **Due date**: May 10, 2025 23:59:59 EDT
+**Course**: CSUY 3913 – Java Programming (Spring 2025)
+**Requirements met**: Thread concurrency, File I/O, Networking, JDBC
+**Due date**: May 10, 2025 23:59:59 EDT
