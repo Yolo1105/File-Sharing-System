@@ -14,27 +14,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import network.ClientHandler;
 import config.Config;
-import database.DatabaseConnectionPool;
-import utils.ResourceUtils;
+import constants.Constants;
+import database.Database;
+import utils.IOUtils;
 
 public class MainServer {
     private static final Logger logger = Logger.getInstance();
     private static ServerSocket serverSocket;
     private static ExecutorService threadPool;
     private static volatile boolean running = true;
-
-    // Error and info messages - could be moved to Config as constants for further centralization
-    private static final String ERR_START_SERVER = "Could not start server on port";
-    private static final String ERR_ACCEPT_CONNECTION = "Error accepting client connection";
-    private static final String ERR_CLOSE_SOCKET = "Error closing server socket";
-    private static final String ERR_THREAD_POOL = "Thread pool did not terminate";
-
-    private static final String INFO_STARTING = "Starting server on port %d with %d core threads, %d max threads";
-    private static final String INFO_STARTED = "Server started successfully";
-    private static final String INFO_SHUTDOWN = "Server shutting down...";
-    private static final String INFO_SHUTDOWN_COMPLETE = "Server shutdown complete";
-    private static final String INFO_NEW_CONNECTION = "New connection accepted from: %s (Active connections: %d)";
-    private static final String INFO_CONNECTION_CLOSED = "Connection closed. Active connections: %d";
 
     // Track number of active connections
     private static final AtomicInteger activeConnections = new AtomicInteger(0);
@@ -45,7 +33,7 @@ public class MainServer {
             startServerLoop();
         } catch (IOException e) {
             int port = Config.getServerPort();
-            logger.log(Logger.Level.FATAL, "MainServer", ERR_START_SERVER + " " + port, e);
+            logger.log(Logger.Level.FATAL, "MainServer", Constants.ErrorMessages.ERR_START_SERVER + " " + port, e);
             System.exit(1);
         } catch (Exception e) {
             // Catch any other startup errors
@@ -60,8 +48,7 @@ public class MainServer {
     private static void initializeServer() throws IOException {
         // Initialize the logging system first
         if (logger != null) {
-            logger.setLogLevel(Config.isDebugMode() ? Logger.Level.DEBUG : Logger.Level.INFO);
-            logger.log(Logger.Level.INFO, "MainServer", "Initializing server...");
+            logger.log(Logger.Level.INFO, "MainServer", Constants.InfoMessages.INFO_STARTING.formatted("server"));
         }
 
         int port = Config.getServerPort();
@@ -70,9 +57,9 @@ public class MainServer {
 
         // Initialize database schema through the connection pool
         try {
-            DatabaseConnectionPool.initializeDatabaseSchema();
+            Database.initializeDatabaseSchema();
         } catch (Exception e) {
-            logger.log(Logger.Level.FATAL, "MainServer", "Failed to initialize database schema", e);
+            logger.log(Logger.Level.FATAL, "MainServer", Constants.ErrorMessages.ERR_DATABASE_SCHEMA, e);
             throw e; // Re-throw to be caught by main
         }
 
@@ -80,7 +67,7 @@ public class MainServer {
         initializeThreadPool(corePoolSize, maxThreads);
 
         logger.log(Logger.Level.INFO, "MainServer",
-                String.format(INFO_STARTING, port, corePoolSize, maxThreads));
+                String.format(Constants.InfoMessages.INFO_SERVER_STARTING, port, corePoolSize, maxThreads));
 
         // Add shutdown hook for graceful shutdown
         Runtime.getRuntime().addShutdownHook(new Thread(MainServer::shutdown));
@@ -88,9 +75,9 @@ public class MainServer {
         // Create the server socket and start accepting connections
         serverSocket = new ServerSocket(port);
         // Set a timeout so we can check if we need to shut down
-        serverSocket.setSoTimeout(1000); // 1 second timeout
+        serverSocket.setSoTimeout(Config.getSocketTimeout() / 10); // 10% of socket timeout
 
-        logger.log(Logger.Level.INFO, "MainServer", INFO_STARTED);
+        logger.log(Logger.Level.INFO, "MainServer", Constants.InfoMessages.INFO_SERVER_STARTED);
     }
 
     // Extracted method to initialize thread pool
@@ -104,7 +91,7 @@ public class MainServer {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 logger.log(Logger.Level.ERROR, "MainServer",
-                        "Thread interrupted while waiting to queue task");
+                        Constants.ErrorMessages.ERR_THREAD_INTERRUPTED);
             }
         };
 
@@ -127,7 +114,7 @@ public class MainServer {
                 // Track connection and submit to thread pool
                 int currentConnections = activeConnections.incrementAndGet();
                 logger.log(Logger.Level.INFO, "MainServer",
-                        String.format(INFO_NEW_CONNECTION,
+                        String.format(Constants.InfoMessages.INFO_NEW_CONNECTION,
                                 clientSocket.getRemoteSocketAddress(), currentConnections));
 
                 threadPool.execute(() -> {
@@ -137,21 +124,21 @@ public class MainServer {
                         // Decrement connection count when client handler finishes
                         int remaining = activeConnections.decrementAndGet();
                         logger.log(Logger.Level.INFO, "MainServer",
-                                String.format(INFO_CONNECTION_CLOSED, remaining));
+                                String.format(Constants.InfoMessages.INFO_CONNECTION_CLOSED, remaining));
                     }
                 });
             } catch (SocketTimeoutException e) {
                 // This is normal - it allows us to periodically check if we should shut down
             } catch (IOException e) {
                 if (running) {
-                    logger.log(Logger.Level.ERROR, "MainServer", ERR_ACCEPT_CONNECTION, e);
+                    logger.log(Logger.Level.ERROR, "MainServer", Constants.ErrorMessages.ERR_ACCEPT_CONNECTION, e);
                 }
             }
         }
     }
 
     private static void shutdown() {
-        logger.log(Logger.Level.INFO, "MainServer", INFO_SHUTDOWN);
+        logger.log(Logger.Level.INFO, "MainServer", Constants.InfoMessages.INFO_SHUTDOWN);
 
         // Prevent multiple shutdown attempts
         if (!running) {
@@ -164,13 +151,13 @@ public class MainServer {
         shutdownServerSocket();
         shutdownThreadPool();
 
-        logger.log(Logger.Level.INFO, "MainServer", INFO_SHUTDOWN_COMPLETE);
+        logger.log(Logger.Level.INFO, "MainServer", Constants.InfoMessages.INFO_SHUTDOWN_COMPLETE);
     }
 
     // Extracted server socket shutdown to separate method
     private static void shutdownServerSocket() {
         if (serverSocket != null && !serverSocket.isClosed()) {
-            ResourceUtils.safeClose(serverSocket, "server socket", logger);
+            IOUtils.safeClose(serverSocket, "server socket", logger);
         }
     }
 
@@ -184,7 +171,7 @@ public class MainServer {
                     // Force shutdown if still executing after timeout
                     threadPool.shutdownNow();
                     if (!threadPool.awaitTermination(15, TimeUnit.SECONDS)) {
-                        logger.log(Logger.Level.ERROR, "MainServer", ERR_THREAD_POOL);
+                        logger.log(Logger.Level.ERROR, "MainServer", Constants.ErrorMessages.ERR_THREAD_POOL);
                     }
                 }
             } catch (InterruptedException e) {
@@ -194,10 +181,5 @@ public class MainServer {
                 Thread.currentThread().interrupt();
             }
         }
-    }
-
-    @Deprecated
-    public static int getActiveConnections() {
-        return activeConnections.get();
     }
 }

@@ -602,3 +602,236 @@ java.net.SocketTimeoutException: Read timed out
 [2025-05-08 22:59:23] [INFO] [Logger] Logging system shutting down
 [2025-05-08 22:59:23] [INFO] [MainServer] Server shutting down...
 [2025-05-08 22:59:23] [INFO] [Logger] Logging system shutting down
+[2025-05-09 23:10:33] [INFO] [Logger] Logging system initialized
+[2025-05-09 23:10:33] [INFO] [Logger] Log level set to: INFO
+[2025-05-09 23:10:33] [INFO] [MainServer] Initializing server...
+[2025-05-09 23:10:33] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-09 23:10:33] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-09 23:10:33] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-09 23:10:33] [INFO] [MainServer] Server started successfully
+[2025-05-09 23:10:37] [INFO] [Logger] Logging system initialized
+[2025-05-09 23:10:37] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55462 (Active connections: 1)
+[2025-05-09 23:10:37] [INFO] [FileManager] FileManager initialized
+[2025-05-09 23:10:37] [INFO] [FileManager] Verifying database tables
+[2025-05-09 23:10:37] [INFO] [FileManager] Database tables verified
+[2025-05-09 23:10:37] [INFO] [ClientHandler] New client connected: /127.0.0.1:55462
+[2025-05-09 23:10:39] [INFO] [Logger] Logging system shutting down
+[2025-05-09 23:10:39] [INFO] [ClientHandler] Connection closed by client: Unknown
+[2025-05-09 23:10:39] [INFO] [ClientHandler] All resources cleaned up for client: Unknown
+[2025-05-09 23:10:39] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-09 23:10:42] [INFO] [MainServer] Server shutting down...
+[2025-05-09 23:10:42] [INFO] [MainServer] Server shutdown complete
+[2025-05-09 23:10:42] [INFO] [Logger] Logging system shutting down
+[2025-05-09 23:10:42] [INFO] [MainServer] Server shutting down...
+[2025-05-09 23:24:13] [INFO] [Logger] Logging system initialized
+[2025-05-09 23:24:13] [INFO] [MainServer] Starting server...
+[2025-05-09 23:24:13] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-09 23:24:13] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-09 23:24:13] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-09 23:24:13] [INFO] [MainServer] Server started successfully
+[2025-05-09 23:24:19] [INFO] [Logger] Logging system initialized
+[2025-05-09 23:24:19] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55623 (Active connections: 1)
+[2025-05-09 23:24:19] [INFO] [FileManager] FileManager initialized
+[2025-05-09 23:24:19] [INFO] [FileManager] Verifying database tables
+[2025-05-09 23:24:19] [INFO] [FileManager] Database tables verified
+[2025-05-09 23:24:19] [INFO] [ClientHandler] New client connected: /127.0.0.1:55623
+[2025-05-09 23:24:23] [INFO] [Broadcaster] Registered client: Mohan Lu
+[2025-05-09 23:24:23] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan Lu has joined the server. (excluding Mohan Lu) to 0 clients
+[2025-05-09 23:25:29] [INFO] [MainServer] Server shutting down...
+[2025-05-09 23:25:29] [INFO] [Logger] Logging system shutting down
+[2025-05-09 23:25:29] [INFO] [Logger] Logging system shutting down
+[2025-05-09 23:45:08] [INFO] [Logger] Logging system initialized
+[2025-05-09 23:45:08] [INFO] [MainServer] Starting server...
+[2025-05-09 23:45:08] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-09 23:45:08] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-09 23:45:08] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-09 23:45:08] [INFO] [MainServer] Server started successfully
+[2025-05-09 23:45:13] [INFO] [Logger] Logging system initialized
+[2025-05-09 23:45:13] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55822 (Active connections: 1)
+[2025-05-09 23:45:13] [INFO] [FileManager] FileManager initialized
+[2025-05-09 23:45:13] [INFO] [ClientHandler] New client connected: /127.0.0.1:55822
+[2025-05-09 23:45:15] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-09 23:45:15] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-09 23:45:17] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-09 23:45:20] [INFO] [MainServer] Server shutting down...
+[2025-05-09 23:45:20] [INFO] [Logger] Logging system shutting down
+[2025-05-09 23:45:20] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:00:45] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:00:45] [INFO] [MainServer] Starting server...
+[2025-05-10 00:00:45] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-10 00:00:45] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-10 00:00:45] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-10 00:00:45] [INFO] [MainServer] Server started successfully
+[2025-05-10 00:00:49] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:00:49] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55888 (Active connections: 1)
+[2025-05-10 00:00:49] [INFO] [FileManager] FileManager initialized
+[2025-05-10 00:00:49] [INFO] [ClientHandler] New client connected: /127.0.0.1:55888
+[2025-05-10 00:00:52] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-10 00:00:52] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-10 00:00:54] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-10 00:00:59] [INFO] [ClientHandler] Mohan issued command: LOGS 10
+[2025-05-10 00:00:59] [INFO] [DBLogger] Initializing database logger - tables should be already created
+[2025-05-10 00:00:59] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-10 00:00:59] [INFO] [DBLogger] Retrieved 10 log entries
+[2025-05-10 00:01:15] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:01:15] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:01:15] [INFO] [MainServer] Server shutting down...
+[2025-05-10 00:17:52] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:17:52] [INFO] [MainServer] Starting server...
+[2025-05-10 00:17:52] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-10 00:17:52] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-10 00:17:52] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-10 00:17:52] [INFO] [MainServer] Server started successfully
+[2025-05-10 00:17:55] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:17:55] [INFO] [Client] Starting %s...
+[2025-05-10 00:17:55] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55946 (Active connections: 1)
+[2025-05-10 00:17:55] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-10 00:17:55] [INFO] [FileManager] FileManager initialized
+[2025-05-10 00:17:55] [INFO] [ClientHandler] New client connected: /127.0.0.1:55946
+[2025-05-10 00:18:00] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:18:00] [INFO] [Client] Starting %s...
+[2025-05-10 00:18:00] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55950 (Active connections: 2)
+[2025-05-10 00:18:00] [INFO] [ClientHandler] New client connected: /127.0.0.1:55950
+[2025-05-10 00:18:00] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-10 00:18:02] [INFO] [Broadcaster] Registered client: MOhan
+[2025-05-10 00:18:02] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOhan has joined the server. (excluding MOhan) to 0 clients
+[2025-05-10 00:18:04] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-10 00:18:04] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has joined the server. (excluding MOMO) to 1 clients
+[2025-05-10 00:18:07] [INFO] [ClientHandler] MOhan issued command: LIST
+[2025-05-10 00:18:22] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55952 (Active connections: 3)
+[2025-05-10 00:18:22] [INFO] [ClientHandler] New client connected: /127.0.0.1:55952
+[2025-05-10 00:18:22] [INFO] [ClientHandler] MOhan_upload issued command: UPLOAD Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:22] [INFO] [FileManager] Starting file reception for: Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:22] [INFO] [FileManager] Receiving file: Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:22] [INFO] [FileManager] File size reported: 30213 bytes
+[2025-05-10 00:18:22] [INFO] [FileManager] Checksum length: 32
+[2025-05-10 00:18:22] [INFO] [FileManager] Checksum received
+[2025-05-10 00:18:22] [INFO] [FileManager] Starting file data transfer
+[2025-05-10 00:18:22] [INFO] [FileManager] File data transfer complete
+[2025-05-10 00:18:22] [INFO] [FileManager] Checksum verification successful
+[2025-05-10 00:18:22] [INFO] [FileManager] File saved to database: Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:22] [INFO] [FileManager] File received successfully: Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:22] [INFO] [DBLogger] Initializing database logger - tables should be already created
+[2025-05-10 00:18:22] [INFO] [DBLogger] Database logger initialized successfully
+[2025-05-10 00:18:22] [INFO] [DBLogger] Logged: MOhan UPLOAD Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:22] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOhan uploaded file: Updated_Sublease_Agreement_Mohan_Lu.docx (excluding none) to 2 clients
+[2025-05-10 00:18:22] [INFO] [ClientHandler] All resources cleaned up for client: MOhan_upload
+[2025-05-10 00:18:22] [INFO] [MainServer] Connection closed. Active connections: 2
+[2025-05-10 00:18:28] [INFO] [ClientHandler] MOhan issued command: LIST
+[2025-05-10 00:18:41] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55953 (Active connections: 3)
+[2025-05-10 00:18:41] [INFO] [ClientHandler] New client connected: /127.0.0.1:55953
+[2025-05-10 00:18:41] [INFO] [ClientHandler] MOhan_download issued command: DOWNLOAD Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:41] [INFO] [FileManager] Sending file: Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:41] [INFO] [FileManager] Sending file size: 30213 bytes
+[2025-05-10 00:18:41] [INFO] [FileManager] Sending checksum of length: 32 bytes
+[2025-05-10 00:18:41] [INFO] [FileManager] File sent successfully: Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:41] [INFO] [DBLogger] Logged: MOhan DOWNLOAD Updated_Sublease_Agreement_Mohan_Lu.docx
+[2025-05-10 00:18:41] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOhan downloaded file: Updated_Sublease_Agreement_Mohan_Lu.docx (excluding none) to 2 clients
+[2025-05-10 00:18:46] [INFO] [ClientHandler] All resources cleaned up for client: MOhan_download
+[2025-05-10 00:18:46] [INFO] [MainServer] Connection closed. Active connections: 2
+[2025-05-10 00:19:03] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:19:03] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:19:03] [INFO] [MainServer] Server shutting down...
+[2025-05-10 00:19:03] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:20:12] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:20:12] [INFO] [MainServer] Starting server...
+[2025-05-10 00:20:12] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-10 00:20:12] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-10 00:20:12] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-10 00:20:12] [INFO] [MainServer] Server started successfully
+[2025-05-10 00:20:17] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:20:17] [INFO] [Client] Starting %s...
+[2025-05-10 00:20:17] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55963 (Active connections: 1)
+[2025-05-10 00:20:17] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-10 00:20:17] [INFO] [FileManager] FileManager initialized
+[2025-05-10 00:20:17] [INFO] [ClientHandler] New client connected: /127.0.0.1:55963
+[2025-05-10 00:20:20] [INFO] [Broadcaster] Registered client: Mohan
+[2025-05-10 00:20:20] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: Mohan has joined the server. (excluding Mohan) to 0 clients
+[2025-05-10 00:20:22] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:20:22] [INFO] [Client] Starting %s...
+[2025-05-10 00:20:22] [INFO] [MainServer] New connection accepted from: /127.0.0.1:55967 (Active connections: 2)
+[2025-05-10 00:20:22] [INFO] [ClientHandler] New client connected: /127.0.0.1:55967
+[2025-05-10 00:20:22] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-10 00:20:23] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-10 00:20:23] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has joined the server. (excluding MOMO) to 1 clients
+[2025-05-10 00:20:26] [INFO] [ClientHandler] Mohan issued command: LIST
+[2025-05-10 00:20:30] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:20:30] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:20:30] [INFO] [MainServer] Server shutting down...
+[2025-05-10 00:20:30] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:32] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:32] [INFO] [MainServer] Starting server...
+[2025-05-10 00:32] [INFO] [ConnectionPool] Connection pool initialized with 2 initial connections
+[2025-05-10 00:32] [INFO] [ConnectionPool] Database schema initialized successfully
+[2025-05-10 00:32] [INFO] [MainServer] Starting server on port 9000 with 10 core threads, 10 max threads
+[2025-05-10 00:32] [INFO] [MainServer] Server started successfully
+[2025-05-10 00:32] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:32] [INFO] [Client] Starting %s...
+[2025-05-10 00:32] [INFO] [MainServer] New connection accepted from: /127.0.0.1:56110 (Active connections: 1)
+[2025-05-10 00:32] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-10 00:32] [INFO] [FileManager] FileManager initialized
+[2025-05-10 00:32] [INFO] [ClientHandler] New client connected: /127.0.0.1:56110
+[2025-05-10 00:32] [INFO] [Broadcaster] Registered client: MOhan
+[2025-05-10 00:32] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOhan has joined the server. (excluding MOhan) to 0 clients
+[2025-05-10 00:32] [INFO] [Logger] Logging system initialized
+[2025-05-10 00:32] [INFO] [Client] Starting %s...
+[2025-05-10 00:32] [INFO] [MainServer] New connection accepted from: /127.0.0.1:56114 (Active connections: 2)
+[2025-05-10 00:32] [INFO] [ClientHandler] New client connected: /127.0.0.1:56114
+[2025-05-10 00:32] [INFO] [Client] Connected to server at localhost:9000
+[2025-05-10 00:32] [INFO] [Broadcaster] Registered client: MOMO
+[2025-05-10 00:32] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has joined the server. (excluding MOMO) to 1 clients
+[2025-05-10 00:32] [INFO] [ClientHandler] MOhan issued command: LIST
+[2025-05-10 00:34] [ERROR] [ClientHandler] Connection lost with MOMO: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.ClientHandler.processCommands(ClientHandler.java:133)
+	at network.ClientHandler.run(ClientHandler.java:87)
+	at MainServer.lambda$startServerLoop$1(MainServer.java:122)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-10 00:34] [INFO] [Broadcaster] Unregistered client: MOMO
+[2025-05-10 00:34] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOMO has left the server. (excluding none) to 1 clients
+[2025-05-10 00:34] [INFO] [ClientHandler] All resources cleaned up for client: MOMO
+[2025-05-10 00:34] [INFO] [MainServer] Connection closed. Active connections: 1
+[2025-05-10 00:34] [ERROR] [ClientHandler] Connection lost with MOhan: Read timed out
+java.net.SocketTimeoutException: Read timed out
+	at java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288)
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:270)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:313)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:188)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
+	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
+	at network.ClientHandler.processCommands(ClientHandler.java:133)
+	at network.ClientHandler.run(ClientHandler.java:87)
+	at MainServer.lambda$startServerLoop$1(MainServer.java:122)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:842)
+
+[2025-05-10 00:34] [INFO] [Broadcaster] Unregistered client: MOhan
+[2025-05-10 00:34] [INFO] [Broadcaster] Broadcast message: SERVER_NOTIFICATION: MOhan has left the server. (excluding none) to 0 clients
+[2025-05-10 00:34] [INFO] [ClientHandler] All resources cleaned up for client: MOhan
+[2025-05-10 00:34] [INFO] [MainServer] Connection closed. Active connections: 0
+[2025-05-10 00:35] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:35] [INFO] [Logger] Logging system shutting down
+[2025-05-10 00:35] [INFO] [MainServer] Server shutting down...
+[2025-05-10 00:35] [INFO] [Logger] Logging system shutting down

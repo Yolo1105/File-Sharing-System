@@ -74,10 +74,6 @@ public class Broadcaster {
         }
     }
 
-    public void broadcast(String message) {
-        broadcast(message, null); // Broadcast to all clients
-    }
-
     public void broadcast(String message, String excludeClient) {
         int successCount = 0;
         int failureCount = 0;
@@ -145,37 +141,5 @@ public class Broadcaster {
         }
 
         broadcast(String.format(DELETE_MESSAGE_FORMAT, deleterName, filename), null);
-    }
-
-    // Utility methods for client management
-
-    public int getConnectedClientsCount() {
-        int count = 0;
-        for (String key : clientWriters.keySet()) {
-            if (!isUtilityConnection(key)) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    public boolean sendDirectMessage(String clientName, String message) {
-        BufferedWriter writer = clientWriters.get(clientName);
-        if (writer != null) {
-            try {
-                writer.write(message);
-                writer.flush();
-                return true;
-            } catch (IOException e) {
-                logger.log(Logger.Level.ERROR, "Broadcaster",
-                        String.format(LOG_SEND_FAILED, clientName, e.getMessage()));
-                clientWriters.remove(clientName);
-            }
-        }
-        return false;
-    }
-
-    public boolean isClientConnected(String clientName) {
-        return clientWriters.containsKey(clientName);
     }
 }

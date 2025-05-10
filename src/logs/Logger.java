@@ -1,5 +1,5 @@
 package logs;
-import utils.ResourceUtils;
+import utils.IOUtils;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -12,23 +12,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * A thread-safe, asynchronous logging system with support for multiple log levels,
- * file output, and console mirroring.
- */
 public class Logger {
-    /**
-     * Log levels in ascending order of importance.
-     */
     public enum Level {
         DEBUG, INFO, WARNING, ERROR, FATAL;
-
-        /**
-         * Checks if this level is at least as important as another level.
-         *
-         * @param other The level to compare against
-         * @return true if this level is at least as important as other
-         */
         public boolean isAtLeastAsImportantAs(Level other) {
             return this.ordinal() >= other.ordinal();
         }
@@ -40,7 +26,7 @@ public class Logger {
     // File configuration
     private static final String LOG_DIRECTORY = "logs/";
     private static final String LOG_FILE = LOG_DIRECTORY + "server.log";
-    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     // Writer and queue for async logging
     private PrintWriter logWriter;
@@ -60,10 +46,6 @@ public class Logger {
     private static final int FLUSH_THRESHOLD = 10;
     private int entriesSinceFlush = 0;
 
-    /**
-     * Private constructor for singleton pattern.
-     * Initializes the logging system.
-     */
     private Logger() {
         try {
             initializeLogDirectory();
@@ -86,9 +68,6 @@ public class Logger {
         }
     }
 
-    /**
-     * Initializes the log directory.
-     */
     private void initializeLogDirectory() {
         java.io.File logDir = new java.io.File(LOG_DIRECTORY);
         if (!logDir.exists()) {
@@ -96,27 +75,14 @@ public class Logger {
         }
     }
 
-    /**
-     * Initializes the log writer.
-     *
-     * @throws IOException If the log file can't be opened for writing
-     */
     private void initializeLogWriter() throws IOException {
         logWriter = new PrintWriter(new FileWriter(LOG_FILE, true), true);
     }
 
-    /**
-     * Gets the singleton instance of the logger.
-     *
-     * @return The logger instance
-     */
     public static Logger getInstance() {
         return instance;
     }
 
-    /**
-     * Starts the asynchronous logging thread.
-     */
     private void startLoggingThread() {
         loggingThread = new Thread(() -> {
             try {
@@ -169,56 +135,11 @@ public class Logger {
         loggingThread.start();
     }
 
-    /**
-     * Sets the minimum log level threshold.
-     *
-     * @param level The minimum level to log
-     */
-    public void setLogLevel(Level level) {
-        this.logLevelThreshold = level;
-        log(Level.INFO, "Logger", String.format("Log level set to: %s", level));
-    }
-
-    /**
-     * Sets debug mode which enables DEBUG level logs.
-     *
-     * @param debug true to enable debug mode, false otherwise
-     */
-    public void setDebugMode(boolean debug) {
-        this.debugMode = debug;
-        log(Level.INFO, "Logger", String.format("Debug mode set to: %s", debug));
-    }
-
-    /**
-     * Sets whether logs should also be output to console.
-     *
-     * @param enabled true to enable console output, false otherwise
-     */
-    public void setConsoleOutput(boolean enabled) {
-        this.consoleOutput = enabled;
-        log(Level.INFO, "Logger", String.format("Console output set to: %s", enabled));
-    }
-
-    /**
-     * Formats a log entry.
-     *
-     * @param level The log level
-     * @param source The source of the log
-     * @param message The log message
-     * @return The formatted log entry
-     */
     private String formatLogEntry(Level level, String source, String message) {
         String timestamp = LocalDateTime.now().format(timeFormatter);
         return String.format("[%s] [%s] [%s] %s", timestamp, level, source, message);
     }
 
-    /**
-     * Logs a message.
-     *
-     * @param level The log level
-     * @param source The source of the log
-     * @param message The log message
-     */
     public void log(Level level, String source, String message) {
         // Skip logging if not initialized or if level is below threshold
         if (!initialized.get() || !level.isAtLeastAsImportantAs(logLevelThreshold)) {
@@ -249,14 +170,6 @@ public class Logger {
         logQueue.add(logEntry);
     }
 
-    /**
-     * Logs a message with an associated throwable.
-     *
-     * @param level The log level
-     * @param source The source of the log
-     * @param message The log message
-     * @param throwable The throwable to log
-     */
     public void log(Level level, String source, String message, Throwable throwable) {
         log(level, source, String.format("%s: %s", message, throwable.getMessage()));
 
@@ -277,73 +190,19 @@ public class Logger {
         }
     }
 
-    // Static convenience methods
-
-    /**
-     * Logs an info message.
-     *
-     * @param source The source of the log
-     * @param message The log message
-     */
     public static void logInfo(String source, String message) {
         getInstance().log(Level.INFO, source, message);
     }
-
-    /**
-     * Logs a warning message.
-     *
-     * @param source The source of the log
-     * @param message The log message
-     */
     public static void logWarning(String source, String message) {
         getInstance().log(Level.WARNING, source, message);
     }
-
-    /**
-     * Logs an error message.
-     *
-     * @param source The source of the log
-     * @param message The log message
-     */
     public static void logError(String source, String message) {
         getInstance().log(Level.ERROR, source, message);
     }
-
-    /**
-     * Logs an error message with an associated throwable.
-     *
-     * @param source The source of the log
-     * @param message The log message
-     * @param throwable The throwable to log
-     */
-    public static void logError(String source, String message, Throwable throwable) {
-        getInstance().log(Level.ERROR, source, message, throwable);
-    }
-
-    /**
-     * Logs a debug message.
-     *
-     * @param source The source of the log
-     * @param message The log message
-     */
     public static void logDebug(String source, String message) {
         getInstance().log(Level.DEBUG, source, message);
     }
 
-    /**
-     * Logs a fatal message with an associated throwable.
-     *
-     * @param source The source of the log
-     * @param message The log message
-     * @param throwable The throwable to log
-     */
-    public static void logFatal(String source, String message, Throwable throwable) {
-        getInstance().log(Level.FATAL, source, message, throwable);
-    }
-
-    /**
-     * Shuts down the logging system.
-     */
     public void shutdown() {
         if (!initialized.get()) {
             return;
@@ -368,7 +227,7 @@ public class Logger {
             // Final sync flush of any remaining entries
             synchronized (logWriter) {
                 logWriter.flush();
-                ResourceUtils.safeClose(logWriter);
+                IOUtils.safeClose(logWriter);
             }
         } catch (Exception e) {
             System.err.println("Error closing logger: " + e.getMessage());

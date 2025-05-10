@@ -4,30 +4,18 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import database.DatabaseConnectionPool;
+import database.Database;
+import constants.Constants;
 
-/**
- * Database-backed logger for file operations. Records user actions in the database
- * for auditing and history tracking.
- */
 public class DBLogger {
     private static final Logger logger = Logger.getInstance();
     private static volatile boolean initialized = false;
     private static boolean initializing = false;
 
     // Date format patterns
-    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    // Error messages
-    private static final String ERR_INIT_FAILED = "Failed to initialize database logger";
-    private static final String ERR_LOG_FAILED = "Failed to log action";
-    private static final String ERR_LOGS_FAILED = "Failed to retrieve logs";
-
-    /**
-     * Initializes the database logger if not already initialized.
-     * Checks for the existence of required tables.
-     */
     private static synchronized void initialize() {
         if (initialized || initializing) return;
 
@@ -36,10 +24,10 @@ public class DBLogger {
 
         try {
             // Just verify the table exists as a sanity check
-            boolean tableExists = DatabaseConnectionPool.queryWithConnection(conn -> {
+            boolean tableExists = Database.queryWithConnection(conn -> {
                 try {
                     // Use the tableExists helper method from ConnectionManager instead
-                    return DatabaseConnectionPool.tableExists(conn, "logs");
+                    return Database.tableExists(conn, "logs");
                 } catch (SQLException e) {
                     logger.log(Logger.Level.ERROR, "DBLogger", "Error checking if logs table exists", e);
                     return false;
@@ -56,19 +44,12 @@ public class DBLogger {
             initialized = true;
             logger.log(Logger.Level.INFO, "DBLogger", "Database logger initialized successfully");
         } catch (Exception e) {
-            logger.log(Logger.Level.ERROR, "DBLogger", ERR_INIT_FAILED, e);
+            logger.log(Logger.Level.ERROR, "DBLogger", Constants.ErrorMessages.ERR_INIT_FAILED, e);
         } finally {
             initializing = false;
         }
     }
 
-    /**
-     * Logs a file operation to the database.
-     *
-     * @param client The client name that performed the action
-     * @param action The action performed (UPLOAD, DOWNLOAD, DELETE)
-     * @param filename The filename involved in the action
-     */
     public static void log(String client, String action, String filename) {
         // Initialize if needed
         if (!initialized) {
@@ -88,7 +69,7 @@ public class DBLogger {
         final String finalTimestamp = timestamp;
 
         try {
-            DatabaseConnectionPool.executeWithConnection(conn -> {
+            Database.executeWithConnection(conn -> {
                 try {
                     try (PreparedStatement pstmt = conn.prepareStatement(
                             "INSERT INTO logs (client, action, filename, timestamp) VALUES (?, ?, ?, ?)")) {
@@ -109,16 +90,10 @@ public class DBLogger {
                 }
             }, "DBLogger");
         } catch (SQLException e) {
-            logger.log(Logger.Level.ERROR, "DBLogger", ERR_LOG_FAILED, e);
+            logger.log(Logger.Level.ERROR, "DBLogger", Constants.ErrorMessages.ERR_LOG_FAILED, e);
         }
     }
 
-    /**
-     * Normalizes a client name by removing utility connection suffixes.
-     *
-     * @param client The client name to normalize
-     * @return The normalized client name
-     */
     private static String normalizeClientName(String client) {
         // Normalize client name
         if (client == null || client.trim().isEmpty()) {
@@ -133,12 +108,6 @@ public class DBLogger {
         return client;
     }
 
-    /**
-     * Retrieves recent log entries from the database.
-     *
-     * @param limit The maximum number of log entries to retrieve
-     * @return A formatted string containing the log entries
-     */
     public static String getRecentLogs(int limit) {
         // Initialize if needed
         if (!initialized) {
@@ -154,7 +123,7 @@ public class DBLogger {
         try {
             final int finalLimit = safeLimit;
 
-            DatabaseConnectionPool.executeWithConnection(conn -> {
+            Database.executeWithConnection(conn -> {
                 try {
                     try (PreparedStatement pstmt = conn.prepareStatement(
                             "SELECT * FROM logs ORDER BY timestamp DESC LIMIT ?")) {
@@ -183,19 +152,13 @@ public class DBLogger {
                 }
             }, "DBLogger");
         } catch (SQLException e) {
-            logger.log(Logger.Level.ERROR, "DBLogger", ERR_LOGS_FAILED, e);
-            result.append("ERROR: ").append(ERR_LOGS_FAILED).append(": ").append(e.getMessage()).append("\n");
+            logger.log(Logger.Level.ERROR, "DBLogger", Constants.ErrorMessages.ERR_LOGS_FAILED, e);
+            result.append("ERROR: ").append(Constants.ErrorMessages.ERR_LOGS_FAILED).append(": ").append(e.getMessage()).append("\n");
         }
 
         return result.toString();
     }
 
-    /**
-     * Formats a single log entry from the ResultSet and appends it to the StringBuilder.
-     *
-     * @param rs The ResultSet containing the log entry
-     * @param result The StringBuilder to append the formatted log entry to
-     */
     private static void formatLogEntry(ResultSet rs, StringBuilder result) {
         try {
             // Get the values from database

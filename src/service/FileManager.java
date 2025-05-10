@@ -1,7 +1,8 @@
 package service;
 
-import database.DatabaseConnectionPool;
+import database.Database;
 import logs.Logger;
+import constants.Constants;
 
 import java.io.*;
 import java.net.URLDecoder;
@@ -9,113 +10,100 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import config.Config;
 
 public class FileManager {
     private static final Logger logger = Logger.getInstance();
     private static final int BUFFER_SIZE = Config.getBufferSize();
-    private static final AtomicBoolean tablesVerified = new AtomicBoolean(false);
 
     // Maximum file size
     private static final long MAX_FILE_SIZE = Config.getMaxFileSize();
 
-    // Error message constants
-    private static final String ERR_DECODE_FILENAME = "Failed to decode filename";
-    private static final String ERR_FILE_TRANSFER = "File transfer failed";
-    private static final String ERR_FILE_NOT_FOUND = "File not found in database";
-    private static final String ERR_INVALID_FILE_SIZE = "Invalid file size";
-    private static final String ERR_INVALID_CHECKSUM = "Invalid checksum length";
-    private static final String ERR_CHECKSUM_VERIFICATION = "Checksum verification failed";
-    private static final String ERR_BLOCKED_FILE_TYPE = "This file type is not allowed for security reasons";
-    private static final String ERR_FILE_TOO_LARGE = "File exceeds maximum size limit";
-
-    // Success messages
-    private static final String SUCCESS_FILE_SAVED = "File saved to database";
-    private static final String SUCCESS_FILE_RECEIVED = "File received successfully";
-    private static final String SUCCESS_FILE_DELETED = "File deleted successfully";
-
     public FileManager() {
-        logger.log(Logger.Level.INFO, "FileManager", "FileManager initialized");
+        logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_FILEMANAGER_INIT);
     }
 
-    public void verifyDatabaseTables() {
-        if (tablesVerified.get()) {
-            logger.log(Logger.Level.DEBUG, "FileManager", "Database tables already verified");
-            return;
+    private String decodeFileName(String encodedFileName) {
+        try {
+            return URLDecoder.decode(encodedFileName, StandardCharsets.UTF_8.toString());
+        } catch (UnsupportedEncodingException e) {
+            logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_DECODE_FILENAME, e);
+            throw new RuntimeException(Constants.ErrorMessages.ERR_DECODE_FILENAME, e);
         }
+    }
 
-        logger.log(Logger.Level.INFO, "FileManager", "Verifying database tables");
-        tablesVerified.set(true);
-        logger.log(Logger.Level.INFO, "FileManager", "Database tables verified");
+    private String processFileName(String fileName) {
+        // Check for blocked file types
+        if (FileValidation.isBlockedFileType(fileName)) {
+            logger.log(Logger.Level.ERROR, "FileManager", Constants.InfoMessages.INFO_BLOCKED_FILE_REJECTED.formatted(fileName));
+            throw new RuntimeException(Constants.ErrorMessages.ERR_BLOCKED_FILE_TYPE);
+        }
+        // Sanitize filename
+        return FileValidation.sanitizeFileName(fileName);
+    }
+
+    private byte[] calculateChecksum(byte[] data) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        return digest.digest(data);
+    }
+
+    private boolean verifyChecksum(byte[] fileContent, byte[] expectedChecksum)
+            throws NoSuchAlgorithmException {
+        byte[] actualChecksum = calculateChecksum(fileContent);
+        return MessageDigest.isEqual(expectedChecksum, actualChecksum);
     }
 
     public void receiveFile(String encodedFileName, DataInputStream dataIn) {
-        logger.log(Logger.Level.INFO, "FileManager", "Starting file reception for: " + encodedFileName);
+        logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_FILE_RECEPTION_START.formatted(encodedFileName));
 
-        String fileName;
-        try {
-            // Decode the URL-encoded filename
-            fileName = URLDecoder.decode(encodedFileName, StandardCharsets.UTF_8.toString());
-
-            // Check for blocked file types
-            if (FileValidationUtils.isBlockedFileType(fileName)) {
-                logger.log(Logger.Level.ERROR, "FileManager", "Rejected blocked file type: " + fileName);
-                throw new RuntimeException(ERR_BLOCKED_FILE_TYPE);
-            }
-        } catch (UnsupportedEncodingException e) {
-            logger.log(Logger.Level.ERROR, "FileManager", ERR_DECODE_FILENAME, e);
-            throw new RuntimeException(ERR_DECODE_FILENAME, e);
-        }
+        String fileName = decodeFileName(encodedFileName);
+        String sanitizedFileName = processFileName(fileName);
 
         try {
-            logger.log(Logger.Level.INFO, "FileManager", "Receiving file: " + fileName);
+            logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_RECEIVING_FILE.formatted(fileName));
 
             // Read file size and validate
             long fileSize = dataIn.readLong();
-            logger.log(Logger.Level.INFO, "FileManager", "File size reported: " + fileSize + " bytes");
+            logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_FILE_SIZE.formatted(fileSize));
 
             if (fileSize <= 0 || fileSize > MAX_FILE_SIZE) {
-                logger.log(Logger.Level.ERROR, "FileManager", ERR_FILE_TOO_LARGE + ": " + fileSize);
-                throw new IOException(ERR_FILE_TOO_LARGE + ": " + fileSize);
+                logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_FILE_TOO_LARGE + ": " + fileSize);
+                throw new IOException(Constants.ErrorMessages.ERR_FILE_TOO_LARGE + ": " + fileSize);
             }
 
             // Read and validate checksum
             int checksumLength = dataIn.readInt();
-            logger.log(Logger.Level.INFO, "FileManager", "Checksum length: " + checksumLength);
+            logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_CHECKSUM_LENGTH.formatted(checksumLength));
 
             if (checksumLength <= 0 || checksumLength > 64) {
-                logger.log(Logger.Level.ERROR, "FileManager", ERR_INVALID_CHECKSUM + ": " + checksumLength);
-                throw new IOException(ERR_INVALID_CHECKSUM + ": " + checksumLength);
+                logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_INVALID_CHECKSUM.formatted(checksumLength));
+                throw new IOException(Constants.ErrorMessages.ERR_INVALID_CHECKSUM.formatted(checksumLength));
             }
 
             byte[] expectedChecksum = new byte[checksumLength];
             dataIn.readFully(expectedChecksum);
-            logger.log(Logger.Level.INFO, "FileManager", "Checksum received");
-
-            // Sanitize filename using FileValidationUtils
-            String sanitizedFileName = FileValidationUtils.sanitizeFileName(fileName);
+            logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_CHECKSUM_RECEIVED);
 
             // Read file data into buffer
             byte[] fileContent = readFileContent(dataIn, fileSize);
 
             // Verify checksum
-            if (!doChecksumVerification(fileContent, expectedChecksum)) {
-                logger.log(Logger.Level.ERROR, "FileManager", ERR_CHECKSUM_VERIFICATION);
-                throw new IOException(ERR_CHECKSUM_VERIFICATION);
+            if (!verifyChecksum(fileContent, expectedChecksum)) {
+                logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_CHECKSUM_VERIFICATION);
+                throw new IOException(Constants.ErrorMessages.ERR_CHECKSUM_VERIFICATION);
             }
-            logger.log(Logger.Level.INFO, "FileManager", "Checksum verification successful");
+            logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_CHECKSUM_VERIFIED);
 
             // Save file to database
             saveFileToDatabase(sanitizedFileName, fileContent, fileSize, expectedChecksum);
 
             logger.log(Logger.Level.INFO, "FileManager",
-                    SUCCESS_FILE_RECEIVED + ": " + sanitizedFileName);
+                    Constants.SuccessMessages.SUCCESS_FILE_RECEIVED + ": " + sanitizedFileName);
 
         } catch (IOException | NoSuchAlgorithmException | SQLException e) {
-            logger.log(Logger.Level.ERROR, "FileManager", ERR_FILE_TRANSFER + ": " + fileName, e);
-            throw new RuntimeException(ERR_FILE_TRANSFER, e);
+            logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_FILE_TRANSFER + ": " + fileName, e);
+            throw new RuntimeException(Constants.ErrorMessages.ERR_FILE_TRANSFER, e);
         }
     }
 
@@ -126,7 +114,7 @@ public class FileManager {
         int count;
         long lastLoggedProgress = 0;
 
-        logger.log(Logger.Level.INFO, "FileManager", "Starting file data transfer");
+        logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_START_FILE_TRANSFER);
 
         while (remaining > 0 &&
                 (count = dataIn.read(buffer, 0, (int) Math.min(buffer.length, remaining))) != -1) {
@@ -137,24 +125,18 @@ public class FileManager {
             if (fileSize > 1000000 && (fileSize - remaining) - lastLoggedProgress > fileSize / 5) {
                 lastLoggedProgress = fileSize - remaining;
                 int progress = (int)((fileSize - remaining) * 100 / fileSize);
-                logger.log(Logger.Level.INFO, "FileManager", String.format("Receive progress: %d%%", progress));
+                logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_RECEIVE_PROGRESS.formatted(progress));
             }
         }
 
-        logger.log(Logger.Level.INFO, "FileManager", "File data transfer complete");
+        logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_FILE_TRANSFER_COMPLETE);
 
         return fileBuffer.toByteArray();
     }
 
-    private boolean doChecksumVerification(byte[] fileContent, byte[] expectedChecksum)
-            throws NoSuchAlgorithmException {
-        byte[] actualChecksum = calculateChecksum(fileContent);
-        return MessageDigest.isEqual(expectedChecksum, actualChecksum);
-    }
-
     private void saveFileToDatabase(String fileName, byte[] content, long fileSize, byte[] checksum)
             throws SQLException {
-        DatabaseConnectionPool.executeWithConnection(conn -> {
+        Database.executeWithConnection(conn -> {
             try {
                 // First try to delete if file exists
                 try (PreparedStatement pstmt = conn.prepareStatement("DELETE FROM files WHERE filename = ?")) {
@@ -171,37 +153,31 @@ public class FileManager {
                     pstmt.setBytes(4, checksum);
                     pstmt.executeUpdate();
 
-                    logger.log(Logger.Level.INFO, "FileManager", SUCCESS_FILE_SAVED + ": " + fileName);
+                    logger.log(Logger.Level.INFO, "FileManager", Constants.SuccessMessages.SUCCESS_FILE_SAVED + ": " + fileName);
                 }
             } catch (SQLException e) {
-                // Handle SQL Exception inside the lambda
-                logger.log(Logger.Level.ERROR, "FileManager", "Error executing SQL: " + e.getMessage(), e);
-                throw new RuntimeException(e); // Re-throw to be caught by executeWithConnection
+                logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_SQL.formatted(e.getMessage()), e);
+                throw new RuntimeException(e);
             }
         }, "FileManager");
     }
 
     public void sendFile(String encodedFileName, OutputStream outputStream) {
-        String fileName;
-        try {
-            fileName = URLDecoder.decode(encodedFileName, StandardCharsets.UTF_8.toString());
-        } catch (UnsupportedEncodingException e) {
-            logger.log(Logger.Level.ERROR, "FileManager", ERR_DECODE_FILENAME, e);
-            throw new RuntimeException(ERR_DECODE_FILENAME, e);
-        }
+        String fileName = decodeFileName(encodedFileName);
 
         try {
-            // Check for blocked file types
-            if (FileValidationUtils.isBlockedFileType(fileName)) {
-                logger.log(Logger.Level.ERROR, "FileManager", "Rejected blocked file type download: " + fileName);
+            // Process filename (check blocked types and sanitize)
+            String sanitizedFileName;
+            try {
+                sanitizedFileName = processFileName(fileName);
+            } catch (RuntimeException e) {
+                // Handle blocked file type case
+                logger.log(Logger.Level.ERROR, "FileManager", Constants.InfoMessages.INFO_BLOCKED_DOWNLOAD_REJECTED.formatted(fileName));
                 DataOutputStream dataOut = new DataOutputStream(outputStream);
                 dataOut.writeLong(-1);  // Signal rejection
                 dataOut.flush();
                 return;
             }
-
-            // Sanitize the filename using FileValidationUtils
-            String sanitizedFileName = FileValidationUtils.sanitizeFileName(fileName);
 
             // Use buffered streams for better performance
             DataOutputStream dataOut = new DataOutputStream(
@@ -211,50 +187,42 @@ public class FileManager {
             FileData fileData = getFileFromDatabase(sanitizedFileName);
 
             if (fileData == null) {
-                logger.log(Logger.Level.WARNING, "FileManager", ERR_FILE_NOT_FOUND + ": " + sanitizedFileName);
+                logger.log(Logger.Level.WARNING, "FileManager", Constants.ErrorMessages.ERR_FILE_NOT_FOUND_DB + ": " + sanitizedFileName);
                 dataOut.writeLong(-1); // Indicate file not found
                 dataOut.flush();
                 return;
             }
 
-            logger.log(Logger.Level.INFO, "FileManager", "Sending file: " + sanitizedFileName);
+            logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_SENDING_FILE.formatted(sanitizedFileName));
 
             // Send file size
             dataOut.writeLong(fileData.fileSize);
-            logger.log(Logger.Level.INFO, "FileManager", String.format("Sending file size: %d bytes", fileData.fileSize));
+            logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_SENDING_FILE_SIZE.formatted(fileData.fileSize));
 
             // Send checksum
             dataOut.writeInt(fileData.checksum.length);
             dataOut.write(fileData.checksum);
             logger.log(Logger.Level.INFO, "FileManager",
-                    String.format("Sending checksum of length: %d bytes", fileData.checksum.length));
+                    Constants.InfoMessages.INFO_SENDING_CHECKSUM.formatted(fileData.checksum.length));
             dataOut.flush();
 
             // Send file contents
             dataOut.write(fileData.content);
             dataOut.flush();
 
-            logger.log(Logger.Level.INFO, "FileManager", "File sent successfully: " + fileName);
+            logger.log(Logger.Level.INFO, "FileManager", Constants.InfoMessages.INFO_FILE_SENT.formatted(fileName));
 
         } catch (IOException | SQLException e) {
-            logger.log(Logger.Level.ERROR, "FileManager", "Error retrieving file: " + fileName, e);
-            throw new RuntimeException("Failed to retrieve file: " + fileName, e);
+            logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_RETRIEVE_FAILED.formatted(fileName), e);
+            throw new RuntimeException(Constants.ErrorMessages.ERR_RETRIEVE_FAILED.formatted(fileName), e);
         }
     }
 
     public boolean deleteFile(String encodedFileName) {
-        String fileName;
-        try {
-            fileName = URLDecoder.decode(encodedFileName, StandardCharsets.UTF_8.toString());
-        } catch (UnsupportedEncodingException e) {
-            logger.log(Logger.Level.ERROR, "FileManager", ERR_DECODE_FILENAME, e);
-            throw new RuntimeException(ERR_DECODE_FILENAME, e);
-        }
+        String fileName = decodeFileName(encodedFileName);
+        String sanitizedFileName = FileValidation.sanitizeFileName(fileName);
 
-        // Sanitize the filename using FileValidationUtils
-        String sanitizedFileName = FileValidationUtils.sanitizeFileName(fileName);
-
-        return DatabaseConnectionPool.queryWithConnection(conn -> {
+        return Database.queryWithConnection(conn -> {
             try {
                 try (PreparedStatement pstmt = conn.prepareStatement(
                         "DELETE FROM files WHERE filename = ?")) {
@@ -263,16 +231,15 @@ public class FileManager {
 
                     boolean deleted = rowsAffected > 0;
                     if (deleted) {
-                        logger.log(Logger.Level.INFO, "FileManager", SUCCESS_FILE_DELETED + ": " + sanitizedFileName);
+                        logger.log(Logger.Level.INFO, "FileManager", Constants.SuccessMessages.SUCCESS_FILE_DELETED + ": " + sanitizedFileName);
                     } else {
-                        logger.log(Logger.Level.WARNING, "FileManager", ERR_FILE_NOT_FOUND + ": " + sanitizedFileName);
+                        logger.log(Logger.Level.WARNING, "FileManager", Constants.ErrorMessages.ERR_FILE_NOT_FOUND_DB + ": " + sanitizedFileName);
                     }
                     return deleted;
                 }
             } catch (SQLException e) {
-                // Handle SQL Exception inside the lambda
-                logger.log(Logger.Level.ERROR, "FileManager", "Error executing SQL: " + e.getMessage(), e);
-                throw new RuntimeException(e); // Re-throw to be caught by queryWithConnection
+                logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_SQL.formatted(e.getMessage()), e);
+                throw new RuntimeException(e);
             }
         }, false, "FileManager");
     }
@@ -290,7 +257,7 @@ public class FileManager {
     }
 
     private FileData getFileFromDatabase(String fileName) throws SQLException {
-        return DatabaseConnectionPool.queryWithConnection(conn -> {
+        return Database.queryWithConnection(conn -> {
             try {
                 try (PreparedStatement pstmt = conn.prepareStatement(
                         "SELECT content, file_size, checksum FROM files WHERE filename = ?")) {
@@ -308,18 +275,17 @@ public class FileManager {
                     }
                 }
             } catch (SQLException e) {
-                // Handle SQL Exception inside the lambda
-                logger.log(Logger.Level.ERROR, "FileManager", "Error executing SQL: " + e.getMessage(), e);
-                throw new RuntimeException(e); // Re-throw to be caught by queryWithConnection
+                logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_SQL.formatted(e.getMessage()), e);
+                throw new RuntimeException(e);
             }
         }, null, "FileManager");
     }
 
     public String listFiles() {
-        return DatabaseConnectionPool.queryWithConnection(conn -> {
+        return Database.queryWithConnection(conn -> {
             try {
                 StringBuilder sb = new StringBuilder();
-                sb.append("Available files:\n");
+                sb.append(Constants.InfoMessages.INFO_FILE_LIST_HEADER).append('\n');
 
                 try (PreparedStatement pstmt = conn.prepareStatement(
                         "SELECT filename, file_size FROM files ORDER BY filename")) {
@@ -332,43 +298,20 @@ public class FileManager {
                             String fileName = rs.getString("filename");
                             long fileSize = rs.getLong("file_size");
 
-                            sb.append(String.format(" - %s (%d bytes)\n", fileName, fileSize));
+                            sb.append(Constants.InfoMessages.INFO_FILE_LIST_ENTRY.formatted(fileName, fileSize)).append('\n');
                         }
 
                         if (!hasFiles) {
-                            sb.append("No files available.\n");
+                            sb.append(Constants.InfoMessages.INFO_NO_FILES).append('\n');
                         }
                     }
                 }
 
                 return sb.toString();
             } catch (SQLException e) {
-                // Handle SQL Exception inside the lambda
-                logger.log(Logger.Level.ERROR, "FileManager", "Error executing SQL: " + e.getMessage(), e);
-                throw new RuntimeException(e); // Re-throw to be caught by queryWithConnection
+                logger.log(Logger.Level.ERROR, "FileManager", Constants.ErrorMessages.ERR_SQL.formatted(e.getMessage()), e);
+                throw new RuntimeException(e);
             }
-        }, "Error listing files. Please try again later.", "FileManager");
-    }
-
-    private byte[] calculateChecksum(byte[] data) throws NoSuchAlgorithmException {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        return digest.digest(data);
-    }
-
-    public byte[] calculateChecksum(File file) throws IOException, NoSuchAlgorithmException {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        try (BufferedInputStream fis = new BufferedInputStream(new FileInputStream(file), BUFFER_SIZE)) {
-            byte[] buffer = new byte[BUFFER_SIZE];
-            int count;
-            while ((count = fis.read(buffer)) > 0) {
-                digest.update(buffer, 0, count);
-            }
-        }
-        return digest.digest();
-    }
-
-    public boolean verifyChecksum(byte[] data, byte[] expectedChecksum) throws NoSuchAlgorithmException {
-        byte[] actualChecksum = calculateChecksum(data);
-        return MessageDigest.isEqual(expectedChecksum, actualChecksum);
+        }, Constants.InfoMessages.INFO_FILE_LIST_ERROR, "FileManager");
     }
 }

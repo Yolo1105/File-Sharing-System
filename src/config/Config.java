@@ -39,55 +39,6 @@ public class Config {
         public static final String NOTIFICATION_PREFIX = "SERVER_NOTIFICATION:";
     }
 
-    // Error message constants
-    public static final class ErrorMessages {
-        // Common errors
-        public static final String ERR_MISSING_FILENAME = "Missing filename for %s";
-        public static final String ERR_FILE_NOT_FOUND = "File not found: %s";
-        public static final String ERR_BLOCKED_FILE_TYPE = "This file type is not allowed for security reasons";
-        public static final String ERR_FILE_TOO_LARGE = "File exceeds maximum size limit";
-        public static final String ERR_DECODE_FILENAME = "Failed to decode filename";
-        public static final String ERR_ENCODE_FILENAME = "Failed to encode filename: %s";
-
-        // Connection errors
-        public static final String ERR_CONNECTION_LOST = "Connection lost: %s";
-        public static final String ERR_TIMEOUT = "Connection timed out: %s";
-        public static final String ERR_SERVER_TIMEOUT = "Server response timeout. Try again or check server connection";
-
-        // Command errors
-        public static final String ERR_UNKNOWN_COMMAND = "Unknown command. Available commands: UPLOAD <filename>, DOWNLOAD <filename>, DELETE <filename>, LIST, LOGS [count]";
-        public static final String ERR_COMMAND_FAILED = "Command execution failed: %s";
-
-        // File operation errors
-        public static final String ERR_UPLOAD_FAILED = "Upload failed: %s";
-        public static final String ERR_DOWNLOAD_FAILED = "Download failed: %s";
-        public static final String ERR_DELETE_FAILED = "Delete failed: %s";
-        public static final String ERR_INVALID_FILESIZE = "Invalid file size reported: %s";
-        public static final String ERR_INVALID_CHECKSUM = "Invalid checksum length: %s";
-        public static final String ERR_CORRUPTED = "Downloaded file is corrupted. Checksum verification failed";
-    }
-
-    // Success message constants
-    public static final class SuccessMessages {
-        public static final String SUCCESS_UPLOAD = "Upload successful to database";
-        public static final String SUCCESS_DOWNLOAD = "Download completed successfully";
-        public static final String SUCCESS_DELETE = "File '%s' was successfully deleted from the server";
-        public static final String SUCCESS_FILE_SAVED = "File saved to database";
-        public static final String SUCCESS_FILE_RECEIVED = "File received successfully";
-        public static final String SUCCESS_FILE_DELETED = "File deleted successfully";
-    }
-
-    // Info message constants
-    public static final class InfoMessages {
-        public static final String INFO_STARTING = "Starting %s...";
-        public static final String INFO_CONNECTED = "Connected to server at %s:%d";
-        public static final String INFO_PROCESSING = "Processing %s command for: %s";
-        public static final String INFO_PREPARING = "Preparing to upload: %s (%d bytes)";
-        public static final String INFO_PROGRESS = "%s progress: %d%%";
-        public static final String INFO_COMPLETED = "%s completed";
-        public static final String INFO_COMMAND_USAGE = "Usage: %s <filepath> or %s \"<filepath with spaces>\"";
-    }
-
     static {
         boolean loadedConfig = false;
 
@@ -219,25 +170,6 @@ public class Config {
         }
     }
 
-    public static boolean getBooleanProperty(String key, boolean defaultValue) {
-        // Check cache first
-        if (propertyCache.containsKey(key)) {
-            Object value = propertyCache.get(key);
-            if (value instanceof Boolean) {
-                return (Boolean) value;
-            }
-        }
-
-        String value = properties.getProperty(key);
-        if (value == null) {
-            return defaultValue;
-        }
-
-        boolean result = Boolean.parseBoolean(value);
-        propertyCache.put(key, result);
-        return result;
-    }
-
     public static int getServerPort() {
         return getIntProperty("server.port", DEFAULT_SERVER_PORT);
     }
@@ -307,43 +239,10 @@ public class Config {
         return getProperty("server.host", "localhost");
     }
 
-    public static boolean isDebugMode() {
-        return getBooleanProperty("debug.mode", false);
-    }
-
     public static boolean isUtilityConnection(String clientName) {
         return clientName != null &&
                 (clientName.contains("_upload") ||
                         clientName.contains("_download") ||
                         clientName.contains("_verify"));
-    }
-
-    public static void createDefaultConfigFile() {
-        File configFile = new File(CONFIG_FILE);
-        if (!configFile.exists()) {
-            try {
-                Properties defaultProps = new Properties();
-                defaultProps.setProperty("server.port", String.valueOf(DEFAULT_SERVER_PORT));
-                defaultProps.setProperty("server.max_threads", String.valueOf(DEFAULT_MAX_THREADS));
-                defaultProps.setProperty("server.core_pool_size", String.valueOf(DEFAULT_CORE_POOL_SIZE));
-                defaultProps.setProperty("db.url", DEFAULT_DB_URL);
-                defaultProps.setProperty("db.max_connections", String.valueOf(DEFAULT_DB_MAX_CONNECTIONS));
-                defaultProps.setProperty("db.connection_timeout", String.valueOf(DEFAULT_DB_CONNECTION_TIMEOUT));
-                defaultProps.setProperty("server.host", "localhost");
-                defaultProps.setProperty("debug.mode", "false");
-                defaultProps.setProperty("buffer.size", String.valueOf(DEFAULT_BUFFER_SIZE));
-                defaultProps.setProperty("socket.timeout", String.valueOf(DEFAULT_SOCKET_TIMEOUT));
-                defaultProps.setProperty("file.max_size", String.valueOf(DEFAULT_MAX_FILE_SIZE));
-                defaultProps.setProperty("downloads.dir", DEFAULT_DOWNLOADS_DIR);
-
-                try (java.io.FileOutputStream out = new java.io.FileOutputStream(configFile)) {
-                    defaultProps.store(out, "Optimized configuration for File Sharing System");
-                }
-
-                System.out.println("[CONFIG] Created default configuration file: " + configFile.getAbsolutePath());
-            } catch (IOException e) {
-                System.err.println("[CONFIG] Failed to create default configuration file: " + e.getMessage());
-            }
-        }
     }
 }

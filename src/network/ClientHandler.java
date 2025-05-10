@@ -1,7 +1,7 @@
 package network;
 
-import service.FileValidationUtils;
-import utils.ResourceUtils;
+import service.FileValidation;
+import utils.IOUtils;
 import logs.Logger;
 import logs.DBLogger;
 
@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 import service.FileManager;
 import config.Config;
+import constants.Constants;
 
 public class ClientHandler implements Runnable {
     private final Socket socket;
@@ -34,9 +35,6 @@ public class ClientHandler implements Runnable {
 
     // Configuration values from Config
     private static final int BUFFER_SIZE = Config.getBufferSize();
-    private static final int SOCKET_TIMEOUT = Config.getSocketTimeout();
-    private static final int FILE_TRANSFER_TIMEOUT = Config.getFileTransferTimeout();
-    private static final long MAX_FILE_SIZE = Config.getMaxFileSize();
 
     // Command constants directly from Config
     private static final String CMD_UPLOAD = Config.Protocol.CMD_UPLOAD;
@@ -48,29 +46,18 @@ public class ClientHandler implements Runnable {
     private static final String RESPONSE_END_MARKER = Config.Protocol.RESPONSE_END_MARKER;
 
     // Error messages from Config
-    private static final String ERR_MISSING_FILENAME = Config.ErrorMessages.ERR_MISSING_FILENAME;
-    private static final String ERR_BLOCKED_FILE_TYPE = Config.ErrorMessages.ERR_BLOCKED_FILE_TYPE;
-    private static final String ERR_FILE_TOO_LARGE = Config.ErrorMessages.ERR_FILE_TOO_LARGE;
-    private static final String ERR_UPLOAD_FAILED = Config.ErrorMessages.ERR_UPLOAD_FAILED;
-    private static final String ERR_DOWNLOAD_FAILED = Config.ErrorMessages.ERR_DOWNLOAD_FAILED;
-    private static final String ERR_UNKNOWN_COMMAND = Config.ErrorMessages.ERR_UNKNOWN_COMMAND;
-    private static final String ERR_COMMAND_FAILED = Config.ErrorMessages.ERR_COMMAND_FAILED;
-    private static final String ERR_DELETE_FAILED = Config.ErrorMessages.ERR_DELETE_FAILED;
+    private static final String ERR_MISSING_FILENAME = Constants.ErrorMessages.ERR_MISSING_FILENAME;
+    private static final String ERR_BLOCKED_FILE_TYPE = Constants.ErrorMessages.ERR_BLOCKED_FILE_TYPE;
+    private static final String ERR_UPLOAD_FAILED = Constants.ErrorMessages.ERR_UPLOAD_FAILED;
+    private static final String ERR_DOWNLOAD_FAILED = Constants.ErrorMessages.ERR_DOWNLOAD_FAILED;
+    private static final String ERR_UNKNOWN_COMMAND = Constants.ErrorMessages.ERR_UNKNOWN_COMMAND;
+    private static final String ERR_COMMAND_FAILED = Constants.ErrorMessages.ERR_COMMAND_FAILED;
+    private static final String ERR_DELETE_FAILED = Constants.ErrorMessages.ERR_DELETE_FAILED;
 
     // Success messages from Config
-    private static final String SUCCESS_UPLOAD = Config.SuccessMessages.SUCCESS_UPLOAD;
-    private static final String SUCCESS_DOWNLOAD = Config.SuccessMessages.SUCCESS_DOWNLOAD;
-    private static final String SUCCESS_DELETE = Config.SuccessMessages.SUCCESS_DELETE;
-
-    // Static initialization
-    static {
-        try {
-            // Make sure tables are verified once at startup
-            fileManager.verifyDatabaseTables();
-        } catch (Exception e) {
-            logger.log(Logger.Level.ERROR, "ClientHandler", "Error during static initialization", e);
-        }
-    }
+    private static final String SUCCESS_UPLOAD = Constants.SuccessMessages.SUCCESS_UPLOAD;
+    private static final String SUCCESS_DOWNLOAD = Constants.SuccessMessages.SUCCESS_DOWNLOAD;
+    private static final String SUCCESS_DELETE = Constants.SuccessMessages.SUCCESS_DELETE;
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
@@ -209,7 +196,7 @@ public class ClientHandler implements Runnable {
         }
 
         // Check for blocked file types
-        if (FileValidationUtils.isBlockedFileType(uploadFilename)) {
+        if (FileValidation.isBlockedFileType(uploadFilename)) {
             writer.write(ERR_BLOCKED_FILE_TYPE + "\n");
             writer.flush();
             return;
@@ -265,7 +252,7 @@ public class ClientHandler implements Runnable {
         }
 
         // Check for blocked file types
-        if (FileValidationUtils.isBlockedFileType(downloadFilename)) {
+        if (FileValidation.isBlockedFileType(downloadFilename)) {
             writer.write(ERR_BLOCKED_FILE_TYPE + "\n");
             writer.flush();
             return;
@@ -399,10 +386,10 @@ public class ClientHandler implements Runnable {
 
     private void cleanup() {
         // Use ResourceUtils.safeCloseAll for resource cleanup
-        ResourceUtils.safeCloseAll(logger, reader, writer, dataInputStream, dataOutputStream);
+        IOUtils.safeCloseAll(logger, reader, writer, dataInputStream, dataOutputStream);
 
         if (socket != null && !socket.isClosed()) {
-            ResourceUtils.safeClose(socket, "client socket", logger);
+            IOUtils.safeClose(socket, "client socket", logger);
         }
 
         // Only unregister regular clients, not special connections
