@@ -1,9 +1,6 @@
 # File Sharing System
 
-## Overview
-This project implements a privacy-focused, offline-first file-sharing service. A central Java TCP server manages client requests to upload, download, delete and list files; multiple clients connect over the LAN using a simple command-line interface. All operations are logged to an embedded SQLite database for auditing.
-
-## Original email message
+## Overview (Original email message)
 We decided to make a file sharing system like Google Drive, offering a privacy-conscious and offline-friendly solution for teams that need secure, local file sharing without relying on external services where multiple clients can connect to a central server using TCP sockets to upload, download, and list shared files in real time. The project will use multi-threading such that each client connection is handled in a separate thread, and file operations will be managed by the server. I will implement thread synchronization to maintain consistency in shared resources, especially when multiple users access the file system or write to the shared log and database at the same time. This system will be built using Java’s socket API to establish a reliable client-server TCP architecture for local file transfer. To allow persistent tracking and accountability, all file actions such as uploads and downloads will be recorded in a relational database using JDBC, which will support auditing and querying past file activity. Users will interact with the system through a simple command-line interface, which allows them to issue commands like upload, download, and list from any connected machine on the network.
 
 ## Requirement Mapping
