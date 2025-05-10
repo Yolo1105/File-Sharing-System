@@ -37,8 +37,82 @@ We decided to make a file sharing system like Google Drive, offering a privacy-c
 - **Broadcasting Notifications**  
   When a user logs in or performs any file operation, all connected clients receive a real-time notification so every client’s file listing stays up to date without polling.
 
-## Instructions
-Run MainServer.java in root directory first, then run network/Client.java, can run multiple to test broadcast
+## Running Instructions
+
+### 1. Running the System Using the JAR
+
+Ensure the following files and directories exist in the same folder:
+
+* `FileSharingSystem.jar`
+* `resources/config.properties`
+* `logs/file_storage.db`
+
+#### Step 1: Start the Server
+
+In one terminal, run:
+
+```bash
+java -cp FileSharingSystem.jar MainServer
+```
+
+#### Step 2: Start Clients
+
+Open one or more additional terminals and run:
+
+```bash
+java -cp FileSharingSystem.jar network.Client
+```
+
+Each client can upload, download, delete, and list files, and all connected clients will receive broadcast messages when any file operation occurs.
+
+---
+
+### 2. Running the System by Manual Compilation
+
+If you prefer to compile and run the program manually:
+
+#### Step 1: Compile All Source Files
+
+From the root directory containing `src/`, run:
+
+```bash
+javac -d out $(find src -name "*.java")
+```
+
+This compiles all Java files into the `out/` directory.
+
+#### Step 2: Run the Server
+
+In the `out/` directory, run:
+
+```bash
+java MainServer
+```
+
+#### Step 3: Run Clients
+
+In separate terminals, also from the `out/` directory, run:
+
+```bash
+java network.Client
+```
+
+This setup allows you to simulate multiple clients connected to a single server instance.
+
+---
+
+### Configuration File
+
+The `resources/config.properties` file must contain the following settings:
+
+```properties
+server.host=localhost
+server.port=9000
+server.max_threads=10
+db.url=jdbc:sqlite:logs/file_storage.db
+```
+
+Make sure the database file `logs/file_storage.db` exists prior to running the system to ensure logging functionality works correctly.
 
 ## Configuration
 **resources/config.properties**:
