@@ -63,7 +63,7 @@ public class Config {
         optimizeProperties();
         System.out.println("[CONFIG] Server port: " + getServerPort());
         System.out.println("[CONFIG] Max threads: " + getMaxThreads());
-        System.out.println("[CONFIG] DB URL: " + getDbUrl());
+        System.out.println("[CONFIG] Database URL: " + getDbUrl());
     }
 
     private static void setup() {
