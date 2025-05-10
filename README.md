@@ -37,6 +37,9 @@ We decided to make a file sharing system like Google Drive, offering a privacy-c
 - **Broadcasting Notifications**  
   When a user logs in or performs any file operation, all connected clients receive a real-time notification so every client’s file listing stays up to date without polling.
 
+## Instructions
+Run MainServer.java in root directory first, then run network/Client.java, can run multiple to test broadcast
+
 ## Configuration
 **resources/config.properties**:
 ```properties
@@ -45,6 +48,9 @@ server.port=9000
 server.max_threads=10
 db.url=jdbc:sqlite:file_storage.db
 ````
+
+## Demo
+Screenshots in Demo folder for result reference
 
 ## Authors
 Mohan Lu (ml7612)
