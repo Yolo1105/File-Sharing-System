@@ -1,21 +1,19 @@
 package network;
 
-import service.FileValidation;
-import logs.Logger;
+import config.Config;
 import constants.Constants;
-
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Scanner;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
-import utils.IOUtils;
-import config.Config;
+import logs.Logger;
+import service.FileValidation;
+import utils.IOProcessor;
 
 public class Client {
     private static final Logger logger = Logger.getInstance();
@@ -26,8 +24,6 @@ public class Client {
     private static final String PROMPT = "> ";
 
     public static void main(String[] args) {
-        logger.log(Logger.Level.INFO, "Client", Constants.InfoMessages.INFO_STARTING);
-
         String serverHost = Config.getServerHost();
         int serverPort = Config.getServerPort();
         Socket socket = null;
@@ -36,7 +32,7 @@ public class Client {
 
         try {
             socket = new Socket(serverHost, serverPort);
-            SocketHandler.configureStandardSocket(socket);
+            SocketHandler.SocketSetup(socket);
 
             System.out.println(String.format(Constants.InfoMessages.INFO_CONNECTED, serverHost, serverPort));
             logger.log(Logger.Level.INFO, "Client", String.format(Constants.InfoMessages.INFO_CONNECTED, serverHost, serverPort));
@@ -50,7 +46,7 @@ public class Client {
             System.out.println(welcomeMessage);
 
             try (Scanner scanner = new Scanner(System.in)) {
-                System.out.print("Enter your client name: ");
+                System.out.print("Enter your name: ");
                 String clientName = scanner.nextLine().trim();
                 writer.write(Config.Protocol.CLIENT_ID_PREFIX + clientName + "\n");
                 writer.flush();
@@ -73,8 +69,8 @@ public class Client {
             e.printStackTrace();
         } finally {
             connectionActive = false;
-            IOUtils.safeCloseAll(logger, reader, writer);
-            IOUtils.safeClose(socket, "client socket", logger);
+            IOProcessor.closeCheckAll(logger, reader, writer);
+            IOProcessor.closeCheck(socket, "client socket", logger);
 
             System.out.println(Constants.InfoMessages.INFO_CONNECTION_CLOSED);
             try {
@@ -148,18 +144,16 @@ public class Client {
 
         while (connectionActive) {
             System.out.print(PROMPT);
-
             if (!scanner.hasNextLine()) {
                 break;
             }
-
             String command = scanner.nextLine().trim();
 
             if (command.isEmpty()) {
                 continue;
             }
 
-            if (!isConnectionActive(socket)) {
+            if (!AliveConnectionCheck(socket)) {
                 break;
             }
 
@@ -167,25 +161,25 @@ public class Client {
             String cmd = parts[0].toUpperCase();
 
             try {
-                if (!isConnectionActive(socket)) {
+                if (!AliveConnectionCheck(socket)) {
                     break;
                 }
 
                 switch (cmd) {
                     case Config.Protocol.CMD_UPLOAD:
-                        handleUploadCommand(command, serverHost, serverPort, clientName);
+                        uploadCommand(command, serverHost, serverPort, clientName);
                         break;
 
                     case Config.Protocol.CMD_DOWNLOAD:
-                        handleDownloadCommand(command, serverHost, serverPort, clientName);
+                        downloadCommand(command, serverHost, serverPort, clientName);
                         break;
 
                     case Config.Protocol.CMD_LIST:
-                        handleListCommand(writer, socket, reader);
+                        listCommand(writer, socket, reader);
                         break;
 
                     case Config.Protocol.CMD_LOGS:
-                        handleLogsCommand(command, writer, socket, reader);
+                        logsCommand(command, writer, socket, reader);
                         break;
 
                     case Config.Protocol.CMD_DELETE:
@@ -193,13 +187,13 @@ public class Client {
                         break;
 
                     default:
-                        if (!isConnectionActive(socket)) {
+                        if (!AliveConnectionCheck(socket)) {
                             break;
                         }
                         System.out.println(Constants.ErrorMessages.ERR_UNKNOWN_COMMAND);
                 }
 
-                if (!isConnectionActive(socket)) {
+                if (!AliveConnectionCheck(socket)) {
                     break;
                 }
             } catch (IOException e) {
@@ -211,7 +205,7 @@ public class Client {
         }
     }
 
-    private static boolean isConnectionActive(Socket socket) {
+    private static boolean AliveConnectionCheck(Socket socket) {
         if (!connectionActive || socket.isClosed() || !socket.isConnected()) {
             System.out.println(Constants.InfoMessages.INFO_CONNECTION_CLOSED);
             connectionActive = false;
@@ -220,7 +214,7 @@ public class Client {
         return true;
     }
 
-    private static void handleUploadCommand(String command, String serverHost,
+    private static void uploadCommand(String command, String serverHost,
                                             int serverPort, String clientName) {
         String filePath = command.substring(Config.Protocol.CMD_UPLOAD.length()).trim();
 
@@ -232,11 +226,11 @@ public class Client {
             System.out.println(String.format(Constants.ErrorMessages.ERR_MISSING_FILENAME, Config.Protocol.CMD_UPLOAD));
             System.out.println(String.format(Constants.InfoMessages.INFO_COMMAND_USAGE, Config.Protocol.CMD_UPLOAD, Config.Protocol.CMD_UPLOAD));
         } else {
-            handleUpload(filePath, serverHost, serverPort, clientName);
+            upload(filePath, serverHost, serverPort, clientName);
         }
     }
 
-    private static void handleDownloadCommand(String command, String serverHost,
+    private static void downloadCommand(String command, String serverHost,
                                               int serverPort, String clientName) {
         String filename = command.substring(Config.Protocol.CMD_DOWNLOAD.length()).trim();
 
@@ -248,7 +242,7 @@ public class Client {
             System.out.println(String.format(Constants.ErrorMessages.ERR_MISSING_FILENAME, Config.Protocol.CMD_DOWNLOAD));
             System.out.println(String.format(Constants.InfoMessages.INFO_COMMAND_USAGE, Config.Protocol.CMD_DOWNLOAD, Config.Protocol.CMD_DOWNLOAD));
         } else {
-            handleDownload(filename, serverHost, serverPort, clientName);
+            download(filename, serverHost, serverPort, clientName);
         }
     }
 
@@ -274,9 +268,8 @@ public class Client {
         System.out.println(String.format("Processing delete request for: %s", filename));
 
         try {
-            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
-
-            writer.write(Config.Protocol.CMD_DELETE + " " + encodedFilename + "\n");
+            String encodedFile = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
+            writer.write(Config.Protocol.CMD_DELETE + " " + encodedFile + "\n");
             writer.flush();
 
             String response = reader.readLine();
@@ -296,7 +289,7 @@ public class Client {
         }
     }
 
-    private static void handleListCommand(BufferedWriter writer, Socket socket,
+    private static void listCommand(BufferedWriter writer, Socket socket,
                                           BufferedReader reader) throws IOException {
         if (!connectionActive || socket.isClosed()) {
             System.out.println(Constants.InfoMessages.INFO_CONNECTION_CLOSED);
@@ -307,10 +300,10 @@ public class Client {
         writer.flush();
         System.out.println("Requesting file list from server...");
 
-        readServerResponse(socket, reader);
+        serverResponse(socket, reader);
     }
 
-    private static void handleLogsCommand(String command, BufferedWriter writer,
+    private static void logsCommand(String command, BufferedWriter writer,
                                           Socket socket, BufferedReader reader) throws IOException {
         if (!connectionActive || socket.isClosed()) {
             System.out.println(Constants.InfoMessages.INFO_CONNECTION_CLOSED);
@@ -330,10 +323,10 @@ public class Client {
         writer.flush();
         System.out.println(String.format("Requesting %d recent logs from server...", logCount));
 
-        readServerResponse(socket, reader);
+        serverResponse(socket, reader);
     }
 
-    private static void handleUpload(String filePath, String serverHost, int serverPort, String clientName) {
+    private static void upload(String filePath, String serverHost, int serverPort, String clientName) {
         System.out.println(String.format(Constants.InfoMessages.INFO_PROCESSING, "UPLOAD", filePath));
 
         File file = new File(filePath);
@@ -346,7 +339,7 @@ public class Client {
 
         String filename = file.getName();
 
-        if (FileValidation.isBlockedFileType(filename)) {
+        if (FileValidation.checkBlockedFile(filename)) {
             System.out.println(Constants.ErrorMessages.ERR_BLOCKED_FILE_TYPE);
             return;
         }
@@ -359,9 +352,9 @@ public class Client {
 
         System.out.println(String.format(Constants.InfoMessages.INFO_PREPARING, filename, fileSize));
 
-        String encodedFilename;
+        String encodedFile;
         try {
-            encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
+            encodedFile = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
         } catch (UnsupportedEncodingException e) {
             System.out.println(String.format(Constants.ErrorMessages.ERR_ENCODE_FILENAME, e.getMessage()));
             return;
@@ -374,7 +367,7 @@ public class Client {
 
         try {
             uploadSocket = new Socket(serverHost, serverPort);
-            SocketHandler.configureFileTransferSocket(uploadSocket);
+            SocketHandler.FileTransferSocket(uploadSocket);
 
             uploadReader = new BufferedReader(
                     new InputStreamReader(uploadSocket.getInputStream(), StandardCharsets.UTF_8));
@@ -390,7 +383,7 @@ public class Client {
 
             uploadReader.readLine();
 
-            uploadWriter.write(Config.Protocol.CMD_UPLOAD + " " + encodedFilename + "\n");
+            uploadWriter.write(Config.Protocol.CMD_UPLOAD + " " + encodedFile + "\n");
             uploadWriter.flush();
 
             try {
@@ -401,7 +394,7 @@ public class Client {
 
             uploadDataOut.writeLong(fileSize);
 
-            byte[] checksum = calculateChecksum(file);
+            byte[] checksum = processChecksum(file);
             uploadDataOut.writeInt(checksum.length);
             uploadDataOut.write(checksum);
             uploadDataOut.flush();
@@ -441,17 +434,17 @@ public class Client {
         } catch (Exception e) {
             System.out.println(String.format(Constants.ErrorMessages.ERR_UPLOAD_FAILED, e.getMessage()));
         } finally {
-            IOUtils.safeCloseAll(logger, uploadReader, uploadWriter, uploadDataOut);
-            IOUtils.safeClose(uploadSocket, "upload socket", logger);
+            IOProcessor.closeCheckAll(logger, uploadReader, uploadWriter, uploadDataOut);
+            IOProcessor.closeCheck(uploadSocket, "upload socket", logger);
         }
     }
 
-    private static void handleDownload(String filename, String serverHost, int serverPort, String clientName) {
+    private static void download(String filename, String serverHost, int serverPort, String clientName) {
         System.out.println(String.format(Constants.InfoMessages.INFO_PROCESSING, "DOWNLOAD", filename));
 
-        String encodedFilename;
+        String encodedFile;
         try {
-            encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
+            encodedFile = URLEncoder.encode(filename, StandardCharsets.UTF_8.toString());
         } catch (UnsupportedEncodingException e) {
             System.out.println(String.format(Constants.ErrorMessages.ERR_ENCODE_FILENAME, e.getMessage()));
             return;
@@ -464,7 +457,7 @@ public class Client {
 
         try {
             downloadSocket = new Socket(serverHost, serverPort);
-            SocketHandler.configureFileTransferSocket(downloadSocket);
+            SocketHandler.FileTransferSocket(downloadSocket);
 
             downloadReader = new BufferedReader(
                     new InputStreamReader(downloadSocket.getInputStream(), StandardCharsets.UTF_8));
@@ -482,7 +475,7 @@ public class Client {
 
             System.out.println(String.format(Constants.InfoMessages.INFO_PROCESSING, "download", filename));
 
-            downloadWriter.write(Config.Protocol.CMD_DOWNLOAD + " " + encodedFilename + "\n");
+            downloadWriter.write(Config.Protocol.CMD_DOWNLOAD + " " + encodedFile + "\n");
             downloadWriter.flush();
 
             try {
@@ -550,17 +543,16 @@ public class Client {
                 fileOut.flush();
             }
 
-            byte[] actualChecksum = calculateChecksum(tempFile);
+            byte[] actualChecksum = processChecksum(tempFile);
             boolean checksumMatch = MessageDigest.isEqual(expectedChecksum, actualChecksum);
 
             if (!checksumMatch) {
                 System.out.println(Constants.ErrorMessages.ERR_CORRUPTED);
-                IOUtils.safeDelete(tempFile, logger);
+                IOProcessor.deleteCheck(tempFile, logger);
             } else {
                 if (outFile.exists()) {
-                    IOUtils.safeDelete(outFile, logger);
+                    IOProcessor.deleteCheck(outFile, logger);
                 }
-
                 boolean renamed = tempFile.renameTo(outFile);
 
                 if (renamed) {
@@ -568,7 +560,7 @@ public class Client {
                     System.out.println(String.format("File saved to: %s", outFile.getAbsolutePath()));
                 } else {
                     System.out.println("Failed to save downloaded file");
-                    IOUtils.safeDelete(tempFile, logger);
+                    IOProcessor.deleteCheck(tempFile, logger);
                 }
             }
 
@@ -585,12 +577,12 @@ public class Client {
         } catch (Exception e) {
             System.out.println(String.format(Constants.ErrorMessages.ERR_DOWNLOAD_FAILED, e.getMessage()));
         } finally {
-            IOUtils.safeCloseAll(logger, downloadReader, downloadWriter, downloadDataIn);
-            IOUtils.safeClose(downloadSocket, "download socket", logger);
+            IOProcessor.closeCheckAll(logger, downloadReader, downloadWriter, downloadDataIn);
+            IOProcessor.closeCheck(downloadSocket, "download socket", logger);
         }
     }
 
-    private static void readServerResponse(Socket socket, BufferedReader reader) throws IOException {
+    private static void serverResponse(Socket socket, BufferedReader reader) throws IOException {
         if (!connectionActive || socket.isClosed()) {
             throw new IOException("Connection closed");
         }
@@ -645,7 +637,7 @@ public class Client {
         }
     }
 
-    private static byte[] calculateChecksum(File file) throws IOException, NoSuchAlgorithmException {
+    private static byte[] processChecksum(File file) throws IOException, NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (BufferedInputStream fis = new BufferedInputStream(new FileInputStream(file), BUFFER_SIZE)) {
             byte[] buffer = new byte[BUFFER_SIZE];

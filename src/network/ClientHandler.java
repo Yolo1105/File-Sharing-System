@@ -1,42 +1,32 @@
 package network;
 
-import service.FileValidation;
-import utils.IOUtils;
-import logs.Logger;
-import logs.DBLogger;
-
+import config.Config;
+import constants.Constants;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-
+import logs.DBLogger;
+import logs.Logger;
 import service.FileManager;
-import config.Config;
-import constants.Constants;
-
+import service.FileValidation;
+import utils.IOProcessor;
 public class ClientHandler implements Runnable {
     private final Socket socket;
     private static final FileManager fileManager = new FileManager();
     private static final Broadcaster broadcaster = Broadcaster.getInstance();
     private static final Logger logger = Logger.getInstance();
-
-    // Client information
     private String clientName = "Unknown";
 
-    // Stream handling
     private BufferedReader reader;
     private BufferedWriter writer;
     private DataInputStream dataInputStream;
     private DataOutputStream dataOutputStream;
 
-    // State management
     private volatile boolean running = true;
-
-    // Configuration values from Config
     private static final int BUFFER_SIZE = Config.getBufferSize();
 
-    // Command constants directly from Config
     private static final String CMD_UPLOAD = Config.Protocol.CMD_UPLOAD;
     private static final String CMD_DOWNLOAD = Config.Protocol.CMD_DOWNLOAD;
     private static final String CMD_DELETE = Config.Protocol.CMD_DELETE;
@@ -45,7 +35,6 @@ public class ClientHandler implements Runnable {
     private static final String CLIENT_ID_PREFIX = Config.Protocol.CLIENT_ID_PREFIX;
     private static final String RESPONSE_END_MARKER = Config.Protocol.RESPONSE_END_MARKER;
 
-    // Error messages from Config
     private static final String ERR_MISSING_FILENAME = Constants.ErrorMessages.ERR_MISSING_FILENAME;
     private static final String ERR_BLOCKED_FILE_TYPE = Constants.ErrorMessages.ERR_BLOCKED_FILE_TYPE;
     private static final String ERR_UPLOAD_FAILED = Constants.ErrorMessages.ERR_UPLOAD_FAILED;
@@ -54,7 +43,6 @@ public class ClientHandler implements Runnable {
     private static final String ERR_COMMAND_FAILED = Constants.ErrorMessages.ERR_COMMAND_FAILED;
     private static final String ERR_DELETE_FAILED = Constants.ErrorMessages.ERR_DELETE_FAILED;
 
-    // Success messages from Config
     private static final String SUCCESS_UPLOAD = Constants.SuccessMessages.SUCCESS_UPLOAD;
     private static final String SUCCESS_DOWNLOAD = Constants.SuccessMessages.SUCCESS_DOWNLOAD;
     private static final String SUCCESS_DELETE = Constants.SuccessMessages.SUCCESS_DELETE;
@@ -68,25 +56,17 @@ public class ClientHandler implements Runnable {
         logger.log(Logger.Level.INFO, "ClientHandler", "New client connected: " + socket.getRemoteSocketAddress());
 
         try {
-            // Configure socket for better stability
-            SocketHandler.configureStandardSocket(socket);
-
-            // Create IO streams
+            SocketHandler.SocketSetup(socket);
             createStreams();
 
-            // Welcome sequence
-            writer.write("Welcome to the File Server. Please identify using CLIENT_ID <n>\n");
+            writer.write("Welcome to the File Sharing Server. Please enter you name to start: \n");
             writer.flush();
 
-            // Handle client identification
             String initial = reader.readLine();
-            if (!handleClientIdentification(initial)) {
-                return; // Identification failed, connection closed
+            if (!clientIdentificationCheck(initial)) {
+                return; 
             }
-
-            // Main command processing loop
             processCommands();
-
         } catch (SocketException e) {
             logger.log(Logger.Level.INFO, "ClientHandler", "Connection closed by client: " + clientName);
         } catch (IOException e) {
@@ -103,18 +83,15 @@ public class ClientHandler implements Runnable {
         dataOutputStream = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream(), BUFFER_SIZE));
     }
 
-    private boolean handleClientIdentification(String identificationMessage) throws IOException {
+    private boolean clientIdentificationCheck(String identificationMessage) throws IOException {
         if (identificationMessage != null && identificationMessage.startsWith(CLIENT_ID_PREFIX)) {
             String[] parts = identificationMessage.split("\\s+", 2);
             if (parts.length == 2) {
                 clientName = parts[1].trim();
-
-                // Don't broadcast notifications for utility connections (with _upload, _download, etc.)
-                if (!Config.isUtilityConnection(clientName)) {
+                if (!Config.ServiceConnectionCheck(clientName)) {
                     broadcaster.register(clientName, writer);
                 }
-
-                writer.write("You can now use: UPLOAD <filename>, DOWNLOAD <filename>, DELETE <filename>, LIST, LOGS [count]\n");
+                writer.write("Available commands: UPLOAD <filename>, DOWNLOAD <filename>, DELETE <filename>, LIST, LOGS [count]\n");
                 writer.flush();
                 return true;
             } else {
@@ -134,7 +111,6 @@ public class ClientHandler implements Runnable {
         while (running && (line = reader.readLine()) != null) {
             logger.log(Logger.Level.INFO, "ClientHandler", clientName + " issued command: " + line);
 
-            // Get the first word as the command
             String command;
             String remainder = "";
 
@@ -149,11 +125,11 @@ public class ClientHandler implements Runnable {
             try {
                 switch (command) {
                     case CMD_UPLOAD:
-                        handleUpload(remainder);
+                        upload(remainder);
                         break;
 
                     case CMD_DOWNLOAD:
-                        handleDownload(remainder);
+                        download(remainder);
                         break;
 
                     case CMD_LIST:
@@ -174,12 +150,12 @@ public class ClientHandler implements Runnable {
                         break;
                 }
             } catch (Exception e) {
-                logger.log(Logger.Level.ERROR, "ClientHandler", "Error processing command: " + command, e);
+                logger.log(Logger.Level.ERROR, "ClientHandler", "Failed to processing command: " + command, e);
                 try {
                     writer.write(String.format(ERR_COMMAND_FAILED, e.getMessage()) + "\n");
                     writer.flush();
                 } catch (IOException ioe) {
-                    // Connection probably lost, breaking out of the loop
+                    
                     logger.log(Logger.Level.ERROR, "ClientHandler",
                             "Failed to send error message, connection may be lost", ioe);
                     break;
@@ -188,87 +164,65 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void handleUpload(String uploadFilename) throws IOException {
+    private void upload(String uploadFilename) throws IOException {
         if (uploadFilename == null || uploadFilename.trim().isEmpty()) {
             writer.write(String.format(ERR_MISSING_FILENAME, "UPLOAD") + "\n");
             writer.flush();
             return;
         }
 
-        // Check for blocked file types
-        if (FileValidation.isBlockedFileType(uploadFilename)) {
+        if (FileValidation.checkBlockedFile(uploadFilename)) {
             writer.write(ERR_BLOCKED_FILE_TYPE + "\n");
             writer.flush();
             return;
         }
 
         try {
-            // Increase timeout for file operations
-            SocketHandler.configureFileTransferSocket(socket);
-
-            // Handle upload with clear protocol boundaries
+            SocketHandler.FileTransferSocket(socket);
             fileManager.receiveFile(uploadFilename, dataInputStream);
-
-            // Log the successful upload
             DBLogger.log(clientName, "UPLOAD", uploadFilename);
 
-            // Add a small delay to ensure streams are synchronized
             try {
                 Thread.sleep(50);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
 
-            // Make sure all data is flushed
             dataOutputStream.flush();
-
-            // Send explicit success response
             writer.write(SUCCESS_UPLOAD + "\n");
             writer.flush();
 
-            // Get the base client name (without _upload suffix)
-            String baseClientName = getBaseClientName();
-
-            // Use the broadcaster method for file upload notifications
+            String baseClientName = getClientName();
             broadcaster.broadcastFileUpload(baseClientName, uploadFilename);
 
-            // Reset timeout to normal
-            SocketHandler.configureStandardSocket(socket);
+            SocketHandler.SocketSetup(socket);
         } catch (RuntimeException e) {
             logger.log(Logger.Level.ERROR, "ClientHandler", "Upload failed: " + e.getMessage(), e);
             writer.write(String.format(ERR_UPLOAD_FAILED, e.getMessage()) + "\n");
             writer.flush();
 
-            // Reset timeout to normal
-            SocketHandler.configureStandardSocket(socket);
+            SocketHandler.SocketSetup(socket);
         }
     }
 
-    private void handleDownload(String downloadFilename) throws IOException {
+    private void download(String downloadFilename) throws IOException {
         if (downloadFilename == null || downloadFilename.trim().isEmpty()) {
             writer.write(String.format(ERR_MISSING_FILENAME, "DOWNLOAD") + "\n");
             writer.flush();
             return;
         }
 
-        // Check for blocked file types
-        if (FileValidation.isBlockedFileType(downloadFilename)) {
+        if (FileValidation.checkBlockedFile(downloadFilename)) {
             writer.write(ERR_BLOCKED_FILE_TYPE + "\n");
             writer.flush();
             return;
         }
 
         try {
-            // Increase timeout during file transfer
-            SocketHandler.configureFileTransferSocket(socket);
-
-            // Send the file
+            SocketHandler.FileTransferSocket(socket);
             fileManager.sendFile(downloadFilename, socket.getOutputStream());
-
-            // Log the download
             DBLogger.log(clientName, "DOWNLOAD", downloadFilename);
 
-            // Small delay to ensure protocol sync
             try {
                 Thread.sleep(50);
             } catch (InterruptedException e) {
@@ -278,21 +232,14 @@ public class ClientHandler implements Runnable {
             writer.write(SUCCESS_DOWNLOAD + "\n");
             writer.flush();
 
-            // Get the base client name (without _download suffix)
-            String baseClientName = getBaseClientName();
-
-            // Use the broadcaster method for file download notifications
+            String baseClientName = getClientName();
             broadcaster.broadcastFileDownload(baseClientName, downloadFilename);
-
-            // Reset timeout to normal
-            SocketHandler.configureStandardSocket(socket);
+            SocketHandler.SocketSetup(socket);
         } catch (RuntimeException e) {
-            logger.log(Logger.Level.ERROR, "ClientHandler", "Error sending file: " + e.getMessage(), e);
+            logger.log(Logger.Level.ERROR, "ClientHandler", "Failed to sending file: " + e.getMessage(), e);
             writer.write(String.format(ERR_DOWNLOAD_FAILED, e.getMessage()) + "\n");
             writer.flush();
-
-            // Reset timeout to normal
-            SocketHandler.configureStandardSocket(socket);
+            SocketHandler.SocketSetup(socket);
         }
     }
 
@@ -304,27 +251,17 @@ public class ClientHandler implements Runnable {
         }
 
         try {
-            // URL decode the filename (since it might have been URL-encoded by the client)
             String decodedFilename = URLDecoder.decode(deleteFilename, StandardCharsets.UTF_8.toString());
-
-            // Delete the file
             boolean deleted = fileManager.deleteFile(decodedFilename);
 
             if (deleted) {
-                // Log the successful deletion
                 DBLogger.log(clientName, "DELETE", decodedFilename);
-
-                // Send success response
                 writer.write(String.format(SUCCESS_DELETE, decodedFilename) + "\n");
                 writer.flush();
-
-                // Get the base client name (without any suffix)
-                String baseClientName = getBaseClientName();
-
-                // Use the broadcaster for file deletion notifications
+                String baseClientName = getClientName();
                 broadcaster.broadcastFileDeletion(baseClientName, decodedFilename);
             } else {
-                // File not found
+                
                 writer.write(String.format(ERR_DELETE_FAILED, "File not found: " + decodedFilename) + "\n");
                 writer.flush();
             }
@@ -341,12 +278,10 @@ public class ClientHandler implements Runnable {
 
     private void handleList() throws IOException {
         String fileList = fileManager.listFiles();
-
-        // Add a clear end marker to help client know when response is complete
         if (fileList.contains("No files available")) {
             writer.write("Available files:\nNo files available on the server.\n" + RESPONSE_END_MARKER + "\n");
         } else {
-            // Send the file list with a clear end marker
+            
             writer.write(fileList.trim() + "\n" + RESPONSE_END_MARKER + "\n");
         }
 
@@ -354,30 +289,24 @@ public class ClientHandler implements Runnable {
     }
 
     private void handleLogs(String params) throws IOException {
-        // Default number of logs to show
         int logCount = 10;
-
-        // Check if user specified a count
         if (params != null && !params.trim().isEmpty()) {
             try {
                 logCount = Integer.parseInt(params.trim());
-                // Enforce reasonable limits
+                
                 if (logCount < 1) logCount = 1;
                 if (logCount > 100) logCount = 100;
             } catch (NumberFormatException e) {
-                // Ignore invalid numbers, use default
+                
             }
         }
 
-        // Get logs from database
         String logs = DBLogger.getRecentLogs(logCount);
-
-        // Send to client with end marker
         writer.write(logs + RESPONSE_END_MARKER + "\n");
         writer.flush();
     }
 
-    private String getBaseClientName() {
+    private String getClientName() {
         if (clientName.contains("_")) {
             return clientName.substring(0, clientName.indexOf("_"));
         }
@@ -385,15 +314,12 @@ public class ClientHandler implements Runnable {
     }
 
     private void cleanup() {
-        // Use ResourceUtils.safeCloseAll for resource cleanup
-        IOUtils.safeCloseAll(logger, reader, writer, dataInputStream, dataOutputStream);
-
+        IOProcessor.closeCheckAll(logger, reader, writer, dataInputStream, dataOutputStream);
         if (socket != null && !socket.isClosed()) {
-            IOUtils.safeClose(socket, "client socket", logger);
+            IOProcessor.closeCheck(socket, "client socket", logger);
         }
 
-        // Only unregister regular clients, not special connections
-        if (clientName != null && !clientName.isEmpty() && !Config.isUtilityConnection(clientName)) {
+        if (clientName != null && !clientName.isEmpty() && !Config.ServiceConnectionCheck(clientName)) {
             broadcaster.unregister(clientName);
         }
 

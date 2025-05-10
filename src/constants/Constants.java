@@ -38,12 +38,12 @@ public final class Constants {
         public static final String ERR_FILE_TRANSFER = "File transfer failed";
         public static final String ERR_FILE_NOT_FOUND_DB = "File not found in database";
         public static final String ERR_CHECKSUM_VERIFICATION = "Checksum verification failed";
-        public static final String ERR_SQL = "Error executing SQL: %s";
+        public static final String ERR_SQL = "Failed to executing SQL: %s";
         public static final String ERR_RETRIEVE_FAILED = "Failed to retrieve file: %s";
 
-        // Server errors (added from MainServer)
+        // Server errors
         public static final String ERR_START_SERVER = "Could not start server on port";
-        public static final String ERR_ACCEPT_CONNECTION = "Error accepting client connection";
+        public static final String ERR_ACCEPT_CONNECTION = "Failed to accepting client connection";
         public static final String ERR_THREAD_POOL = "Thread pool did not terminate";
         public static final String ERR_DATABASE_SCHEMA = "Failed to initialize database schema";
         public static final String ERR_THREAD_INTERRUPTED = "Thread interrupted while waiting to queue task";
@@ -59,7 +59,6 @@ public final class Constants {
     }
 
     public static final class InfoMessages {
-        public static final String INFO_STARTING = "Starting %s...";
         public static final String INFO_CONNECTED = "Connected to server at %s:%d";
         public static final String INFO_PROCESSING = "Processing %s command for: %s";
         public static final String INFO_PREPARING = "Preparing to upload: %s (%d bytes)";
@@ -87,9 +86,9 @@ public final class Constants {
         public static final String INFO_FILE_LIST_HEADER = "Available files:";
         public static final String INFO_FILE_LIST_ENTRY = " - %s (%d bytes)";
         public static final String INFO_NO_FILES = "No files available.";
-        public static final String INFO_FILE_LIST_ERROR = "Error listing files. Please try again later.";
+        public static final String INFO_FILE_LIST_ERROR = "Failed to listing files. Please try again later.";
 
-        // Server info messages (added from MainServer)
+        // Server info messages
         public static final String INFO_SERVER_STARTING = "Starting server on port %d with %d core threads, %d max threads";
         public static final String INFO_SERVER_STARTED = "Server started successfully";
         public static final String INFO_SHUTDOWN = "Server shutting down...";

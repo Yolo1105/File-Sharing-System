@@ -1,11 +1,11 @@
 package network;
 
+import config.Config;
 import java.net.Socket;
 import java.net.SocketException;
-import config.Config;
 
 public class SocketHandler {
-    public static void configureSocket(Socket socket, int timeout) throws SocketException {
+    public static void Socket(Socket socket, int timeout) throws SocketException {
         if (socket == null) {
             throw new IllegalArgumentException("Socket cannot be null");
         }
@@ -14,11 +14,11 @@ public class SocketHandler {
         socket.setSoTimeout(timeout);
     }
 
-    public static void configureFileTransferSocket(Socket socket) throws SocketException {
-        configureSocket(socket, Config.getFileTransferTimeout());
+    public static void SocketSetup(Socket socket) throws SocketException {
+        Socket(socket, Config.getSocketTimeout());
     }
 
-    public static void configureStandardSocket(Socket socket) throws SocketException {
-        configureSocket(socket, Config.getSocketTimeout());
+    public static void FileTransferSocket(Socket socket) throws SocketException {
+        Socket(socket, Config.getFileTransferTimeout());
     }
 }

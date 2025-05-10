@@ -1,6 +1,6 @@
 package database;
 
-import logs.Logger;
+import config.Config;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -12,9 +12,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
-import utils.IOUtils;
-import config.Config;
+import logs.Logger;
+import utils.IOProcessor;
 
 public class Database {
     private static final Database instance = new Database();
@@ -27,7 +26,7 @@ public class Database {
     private final int CONNECTION_TIMEOUT_SECONDS;
 
     private boolean initialized = false;
-    private boolean databaseSchemaInitialized = false;
+    private boolean initializedDatabaseSchema = false;
 
     private Database() {
         System.out.println("[INIT] Initializing ConnectionPool with database URL: " + Config.getDbUrl());
@@ -55,21 +54,21 @@ public class Database {
     public static synchronized void initializeDatabaseSchema() {
         Database pool = getInstance();
 
-        if (pool.databaseSchemaInitialized) {
+        if (pool.initializedDatabaseSchema) {
             System.out.println("[INFO] Database schema already initialized, skipping");
             return;
         }
 
         System.out.println("[INFO] Initializing database schema...");
-        Connection conn = null;
+        Connection con_stat = null;
 
         try {
-            conn = pool.getConnection();
-            applySQLitePragmas(conn);
-            createFilesTable(conn);
-            createLogsTable(conn);
+            con_stat = pool.getConnection();
+            applySQLitePragmas(con_stat);
+            createFilesTable(con_stat);
+            createLogsTable(con_stat);
 
-            pool.databaseSchemaInitialized = true;
+            pool.initializedDatabaseSchema = true;
             System.out.println("[INFO] Database schema initialized successfully");
 
             try {
@@ -84,12 +83,12 @@ public class Database {
             e.printStackTrace();
             throw new RuntimeException("Failed to initialize database schema", e);
         } finally {
-            pool.releaseConnection(conn);
+            pool.releaseConnection(con_stat);
         }
     }
 
-    public static void applySQLitePragmas(Connection conn) throws SQLException {
-        try (Statement stmt = conn.createStatement()) {
+    public static void applySQLitePragmas(Connection con_stat) throws SQLException {
+        try (Statement stmt = con_stat.createStatement()) {
             stmt.execute("PRAGMA foreign_keys = ON");
             stmt.execute("PRAGMA journal_mode = WAL");
             stmt.execute("PRAGMA synchronous = NORMAL");
@@ -97,11 +96,11 @@ public class Database {
         }
     }
 
-    private static void createFilesTable(Connection conn) throws SQLException {
-        boolean tableExists = tableExists(conn, "files");
+    private static void createFilesTable(Connection con_stat) throws SQLException {
+        boolean tableExists = tableExists(con_stat, "files");
 
         if (!tableExists) {
-            try (Statement stmt = conn.createStatement()) {
+            try (Statement stmt = con_stat.createStatement()) {
                 stmt.executeUpdate("""
                     CREATE TABLE files (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -119,11 +118,11 @@ public class Database {
         }
     }
 
-    private static void createLogsTable(Connection conn) throws SQLException {
-        boolean tableExists = tableExists(conn, "logs");
+    private static void createLogsTable(Connection con_stat) throws SQLException {
+        boolean tableExists = tableExists(con_stat, "logs");
 
         if (!tableExists) {
-            try (Statement stmt = conn.createStatement()) {
+            try (Statement stmt = con_stat.createStatement()) {
                 stmt.executeUpdate("""
                     CREATE TABLE logs (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -140,13 +139,13 @@ public class Database {
         }
     }
 
-    public static boolean tableExists(Connection conn, String tableName) throws SQLException {
-        try (ResultSet rs = conn.getMetaData().getTables(null, null, tableName, null)) {
+    public static boolean tableExists(Connection con_stat, String tableName) throws SQLException {
+        try (ResultSet rs = con_stat.getMetaData().getTables(null, null, tableName, null)) {
             return rs.next();
         }
     }
 
-    private synchronized void initializeIfNeeded() {
+    private synchronized void initializeCheck() {
         if (initialized) return;
 
         try {
@@ -168,14 +167,14 @@ public class Database {
 
     private Connection createConnection() throws SQLException {
         try {
-            Connection conn = DriverManager.getConnection(dbUrl);
-            conn.setAutoCommit(true);
-            applySQLitePragmas(conn);
+            Connection con_stat = DriverManager.getConnection(dbUrl);
+            con_stat.setAutoCommit(true);
+            applySQLitePragmas(con_stat);
 
-            if (!conn.isValid(5)) {
+            if (!con_stat.isValid(5)) {
                 throw new SQLException("Failed to create a valid connection");
             }
-            return conn;
+            return con_stat;
         } catch (SQLException e) {
             System.err.println("[ERROR] Failed to create database connection: " + e.getMessage());
             throw e;
@@ -183,7 +182,7 @@ public class Database {
     }
 
     public Connection getConnection() throws SQLException {
-        initializeIfNeeded();
+        initializeCheck();
 
         for (int attempts = 0; attempts < 3; attempts++) {
             try {
@@ -201,19 +200,18 @@ public class Database {
                         }
                     }
 
-                    Connection conn = connections.remove(connections.size() - 1);
+                    Connection con_stat = connections.remove(connections.size() - 1);
 
-                    if (conn.isClosed() || !conn.isValid(2)) {
-                        IOUtils.safeClose(conn);
+                    if (con_stat.isClosed() || !con_stat.isValid(2)) {
+                        IOProcessor.closeCheck(con_stat);
                         try {
-                            conn = createConnection();
+                            con_stat = createConnection();
                         } catch (SQLException e) {
                             semaphore.release();
                             throw e;
                         }
                     }
-
-                    return conn;
+                    return con_stat;
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -239,11 +237,11 @@ public class Database {
                     if (connections.size() < MAX_CONNECTIONS) {
                         connections.add(connection);
                     } else {
-                        IOUtils.safeClose(connection, "excess connection", logger);
+                        IOProcessor.closeCheck(connection, "excess connection", logger);
                     }
                 }
             } else {
-                IOUtils.safeClose(connection, "invalid connection", logger);
+                IOProcessor.closeCheck(connection, "invalid connection", logger);
                 synchronized (connections) {
                     if (connections.size() < MAX_CONNECTIONS) {
                         try {
@@ -257,8 +255,8 @@ public class Database {
             }
         } catch (SQLException e) {
             logger.log(Logger.Level.ERROR, "ConnectionPool",
-                    "Error validating connection before release", e);
-            IOUtils.safeClose(connection);
+                    "Failed to validating connection before release", e);
+            IOProcessor.closeCheck(connection);
         } finally {
             semaphore.release();
         }
@@ -266,31 +264,31 @@ public class Database {
 
     public static void executeWithConnection(Consumer<Connection> action, String logSource) throws SQLException {
         Database pool = getInstance();
-        Connection conn = null;
+        Connection con_stat = null;
 
         try {
-            conn = pool.getConnection();
-            action.accept(conn);
+            con_stat = pool.getConnection();
+            action.accept(con_stat);
         } catch (SQLException e) {
             logger.log(Logger.Level.ERROR, logSource, "Database operation failed: " + e.getMessage(), e);
             throw e;
         } finally {
-            pool.releaseConnection(conn);
+            pool.releaseConnection(con_stat);
         }
     }
 
-    public static <T> T queryWithConnection(Function<Connection, T> function, T defaultValue, String logSource) {
+    public static <T> T queryConnection(Function<Connection, T> function, T defaultValue, String logSource) {
         Database pool = getInstance();
-        Connection conn = null;
+        Connection con_stat = null;
 
         try {
-            conn = pool.getConnection();
-            return function.apply(conn);
+            con_stat = pool.getConnection();
+            return function.apply(con_stat);
         } catch (SQLException e) {
             logger.log(Logger.Level.ERROR, logSource, "Connection operation failed: " + e.getMessage(), e);
             return defaultValue;
         } finally {
-            pool.releaseConnection(conn);
+            pool.releaseConnection(con_stat);
         }
     }
 
@@ -299,7 +297,7 @@ public class Database {
 
         synchronized (connections) {
             for (Connection connection : connections) {
-                IOUtils.safeClose(connection, "database connection", logger);
+                IOProcessor.closeCheck(connection, "database connection", logger);
             }
             connections.clear();
         }

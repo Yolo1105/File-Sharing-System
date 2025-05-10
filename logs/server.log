@@ -249,8 +249,8 @@ java.net.SocketException: An established connection was aborted by the software 
 	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
 	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
 	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
-	at network.Client.readServerResponse(Client.java:600)
-	at network.Client.handleListCommand(Client.java:285)
+	at network.Client.serverResponse(Client.java:600)
+	at network.Client.listCommand(Client.java:285)
 	at network.Client.processUserCommands(Client.java:188)
 	at network.Client.main(Client.java:117)
 
@@ -348,8 +348,8 @@ java.net.SocketException: An established connection was aborted by the software 
 	at java.base/java.io.BufferedReader.fill(BufferedReader.java:162)
 	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:329)
 	at java.base/java.io.BufferedReader.readLine(BufferedReader.java:396)
-	at network.Client.readServerResponse(Client.java:668)
-	at network.Client.handleListCommand(Client.java:353)
+	at network.Client.serverResponse(Client.java:668)
+	at network.Client.listCommand(Client.java:353)
 	at network.Client.processUserCommands(Client.java:242)
 	at network.Client.main(Client.java:121)
 

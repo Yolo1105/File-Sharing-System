@@ -9,10 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Config {
     private static final Properties properties = new Properties();
     private static final String CONFIG_FILE = "config.properties";
-    // Cache for frequently accessed properties
     private static final ConcurrentHashMap<String, Object> propertyCache = new ConcurrentHashMap<>();
 
-    // Standardized constants for the application
     private static final int DEFAULT_BUFFER_SIZE = 32768;
     private static final int DEFAULT_SOCKET_TIMEOUT = 120000;
     private static final int DEFAULT_SERVER_PORT = 9000;
@@ -20,20 +18,16 @@ public class Config {
     private static final String DEFAULT_DB_URL = "jdbc:sqlite:file_storage.db";
     private static final int DEFAULT_DB_MAX_CONNECTIONS = 5;
     private static final int DEFAULT_DB_CONNECTION_TIMEOUT = 30;
-    private static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final long DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; 
     private static final String DEFAULT_DOWNLOADS_DIR = "downloads/";
     private static final int DEFAULT_CORE_POOL_SIZE = 10;
 
-    // Protocol constants for client-server communication
     public static final class Protocol {
-        // Commands
         public static final String CMD_UPLOAD = "UPLOAD";
         public static final String CMD_DOWNLOAD = "DOWNLOAD";
         public static final String CMD_DELETE = "DELETE";
         public static final String CMD_LIST = "LIST";
         public static final String CMD_LOGS = "LOGS";
-
-        // Protocol markers
         public static final String RESPONSE_END_MARKER = "*END*";
         public static final String CLIENT_ID_PREFIX = "CLIENT_ID ";
         public static final String NOTIFICATION_PREFIX = "SERVER_NOTIFICATION:";
@@ -41,8 +35,6 @@ public class Config {
 
     static {
         boolean loadedConfig = false;
-
-        // First try to load from the file system
         File configFile = new File(CONFIG_FILE);
         if (configFile.exists()) {
             try (InputStream input = new java.io.FileInputStream(configFile)) {
@@ -50,42 +42,31 @@ public class Config {
                 System.out.println("[CONFIG] Configuration loaded from file: " + configFile.getAbsolutePath());
                 loadedConfig = true;
             } catch (IOException e) {
-                System.err.println("[CONFIG] Error loading configuration from file: " + e.getMessage());
+                System.err.println("[CONFIG] Failed to loading configuration from file: " + e.getMessage());
             }
         }
 
-        // If not loaded from file system, try classpath
         if (!loadedConfig) {
             try (InputStream input = Config.class.getClassLoader().getResourceAsStream(CONFIG_FILE)) {
                 if (input == null) {
                     System.err.println("[CONFIG] Could not find " + CONFIG_FILE + ", using defaults");
-                    setDefaults();
+                    setup();
                 } else {
                     properties.load(input);
-                    System.out.println("[CONFIG] Configuration loaded from classpath");
                     loadedConfig = true;
                 }
             } catch (IOException e) {
-                System.err.println("[CONFIG] Error loading configuration: " + e.getMessage());
-                setDefaults();
+                System.err.println("[CONFIG] Failed to loading configuration: " + e.getMessage());
+                setup();
             }
         }
-
-        // Set more optimized defaults if needed
         optimizeProperties();
-
-        // Log the loaded configuration
         System.out.println("[CONFIG] Server port: " + getServerPort());
         System.out.println("[CONFIG] Max threads: " + getMaxThreads());
         System.out.println("[CONFIG] DB URL: " + getDbUrl());
-        System.out.println("[CONFIG] Debug mode: " + getProperty("debug.mode", "false"));
-        System.out.println("[CONFIG] Buffer size: " + getBufferSize());
-        System.out.println("[CONFIG] Socket timeout: " + getSocketTimeout());
-        System.out.println("[CONFIG] Max file size: " + getMaxFileSize() + " bytes");
-        System.out.println("[CONFIG] DB max connections: " + getDbMaxConnections());
     }
 
-    private static void setDefaults() {
+    private static void setup() {
         properties.setProperty("server.port", String.valueOf(DEFAULT_SERVER_PORT));
         properties.setProperty("server.max_threads", String.valueOf(DEFAULT_MAX_THREADS));
         properties.setProperty("server.core_pool_size", String.valueOf(DEFAULT_CORE_POOL_SIZE));
@@ -102,10 +83,8 @@ public class Config {
     }
 
     private static void optimizeProperties() {
-        // Ensure buffer sizes are power of 2 and not too small
         int bufferSize = getIntProperty("buffer.size", DEFAULT_BUFFER_SIZE);
         if (bufferSize < 8192 || (bufferSize & (bufferSize - 1)) != 0) {
-            // Round up to nearest power of 2, minimum 8k
             int optimizedSize = 8192;
             while (optimizedSize < bufferSize) {
                 optimizedSize *= 2;
@@ -114,7 +93,6 @@ public class Config {
             System.out.println("[CONFIG] Optimized buffer.size from " + bufferSize + " to " + optimizedSize);
         }
 
-        // Ensure timeout isn't too short
         int socketTimeout = getIntProperty("socket.timeout", 30000);
         if (socketTimeout < 30000) {
             properties.setProperty("socket.timeout", "30000");
@@ -123,7 +101,6 @@ public class Config {
     }
 
     public static int getIntProperty(String key, int defaultValue) {
-        // Check cache first
         if (propertyCache.containsKey(key)) {
             Object value = propertyCache.get(key);
             if (value instanceof Integer) {
@@ -147,7 +124,6 @@ public class Config {
     }
 
     public static long getLongProperty(String key, long defaultValue) {
-        // Check cache first
         if (propertyCache.containsKey(key)) {
             Object value = propertyCache.get(key);
             if (value instanceof Long) {
@@ -187,15 +163,14 @@ public class Config {
     }
 
     public static int getFileTransferTimeout() {
-        return getSocketTimeout() * 2; // Double the regular timeout for file transfers
+        return getSocketTimeout() * 2; 
     }
 
-    public static int getCorePoolSize() {
+    public static int getThreadCount() {
         return getIntProperty("server.core_pool_size", DEFAULT_CORE_POOL_SIZE);
     }
 
     public static String getDbUrl() {
-        // Check cache first
         if (propertyCache.containsKey("db.url")) {
             return (String) propertyCache.get("db.url");
         }
@@ -222,7 +197,6 @@ public class Config {
     }
 
     public static String getProperty(String key, String defaultValue) {
-        // Check cache first
         if (propertyCache.containsKey(key)) {
             Object value = propertyCache.get(key);
             if (value instanceof String) {
@@ -239,7 +213,7 @@ public class Config {
         return getProperty("server.host", "localhost");
     }
 
-    public static boolean isUtilityConnection(String clientName) {
+    public static boolean ServiceConnectionCheck(String clientName) {
         return clientName != null &&
                 (clientName.contains("_upload") ||
                         clientName.contains("_download") ||
