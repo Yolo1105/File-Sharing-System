@@ -49,6 +49,35 @@ server.max_threads=10
 db.url=jdbc:sqlite:file_storage.db
 ````
 
+## Directory Structure
+```
+File-Sharing-System/
+│
+├── MainServer.java              # Entry point to start the TCP server
+├── utils/
+│   └── FileManager.java         # Handles reading, writing, and verifying file content
+│
+├── database/
+│   ├── Database.java            # Manages SQLite connections and query logic
+│   └── connectionpool/         # (Optional) Connection pool logic for database access
+│
+├── network/
+│   ├── Client.java              # Client-side interface for sending commands
+│   └── SocketUtils.java        # Helper methods for sending/receiving over sockets
+│
+├── resources/
+│   └── config.properties        # Server config: host, port, thread count, DB URL
+│
+├── logs/
+│   └── file_storage.db         # SQLite database storing file operation logs
+│
+├── Demo/
+│   └── (Screenshots)           # Demo screenshots to visualize usage
+│
+└── README.md                    # Project overview and documentation
+```
+
+
 ## Demo
 Screenshots in Demo folder for result reference
 
